@@ -8,10 +8,11 @@ const empty = {
   status: 'new', source: 'hotpepper', assignedStaff: '',
   hairType: '', hairCondition: '', scalp: '', hairNotes: '',
   allergies: '', reservationPattern: '', line: false, instagram: '',
+  recDate: '2026-06-24', recMenu: '', recNote: '', recRecipe: '',
 }
 
 export default function NewCustomer() {
-  const { addCustomer } = useStore()
+  const { addCustomer, addTreatment } = useStore()
   const nav = useNavigate()
   const [f, setF] = useState(empty)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
@@ -20,6 +21,15 @@ export default function NewCustomer() {
     e.preventDefault()
     if (!f.name.trim()) return
     const id = addCustomer(f)
+    if (f.recMenu.trim()) {
+      addTreatment(id, {
+        date: f.recDate,
+        staff: f.staff || f.assignedStaff,
+        menu: f.recMenu,
+        note: f.recNote,
+        recipe: f.recRecipe,
+      })
+    }
     nav('/customer/' + id)
   }
 
@@ -102,6 +112,29 @@ export default function NewCustomer() {
             <label htmlFor="line" style={{ color: 'var(--ink)' }}>公式LINE連携済</label>
           </div>
           <div className="field"><label>Instagram</label><input value={f.instagram} onChange={set('instagram')} placeholder="@account" /></div>
+        </div>
+
+        <h3 style={{ marginTop: 18 }}>🧪 初回施術記録（任意）</h3>
+        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--muted)' }}>
+          その場で施術する新規のお客様は、ここに記録すると登録と同時に履歴に残ります。空欄でもOKです。
+        </p>
+        <div className="form-grid">
+          <div className="field">
+            <label>来店日</label>
+            <input type="date" value={f.recDate} onChange={set('recDate')} />
+          </div>
+          <div className="field">
+            <label>メニュー</label>
+            <input value={f.recMenu} onChange={set('recMenu')} placeholder="カット + カラー 等（入力すると履歴に登録）" />
+          </div>
+          <div className="field full">
+            <label>対応メモ</label>
+            <textarea value={f.recNote} onChange={set('recNote')} placeholder="要望・仕上がりなど" />
+          </div>
+          <div className="field full">
+            <label>薬剤レシピ</label>
+            <textarea value={f.recRecipe} onChange={set('recRecipe')} placeholder="例: オラ8-5 + 6-66 = 1:1 / OX4.5% 60g / 放置35分" />
+          </div>
         </div>
 
         <div className="form-actions">

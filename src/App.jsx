@@ -18,7 +18,6 @@ export default function App() {
           <NavLink to="/timetable">予約TT</NavLink>
           <NavLink to="/alerts">フォロー漏れ</NavLink>
           <NavLink to="/new">新規登録</NavLink>
-          <NavLink to="/record">施術記録</NavLink>
         </nav>
         <span className="spacer" />
         <button className="reset-btn" onClick={() => { if (confirm('サンプルデータに戻しますか？')) resetData() }}>
@@ -32,7 +31,6 @@ export default function App() {
           <Route path="/timetable" element={<Timetable />} />
           <Route path="/alerts" element={<FollowUpAlerts />} />
           <Route path="/new" element={<NewCustomer />} />
-          <Route path="/record" element={<TreatmentRecord />} />
           <Route path="/record/:id" element={<TreatmentRecord />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
