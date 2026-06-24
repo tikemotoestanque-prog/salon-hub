@@ -1,13 +1,15 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { STAFF, RES_SOURCE_META } from '../data/sampleData.js'
+import { TODAY_ISO } from '../utils.js'
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 const ROW_H = 56 // px per hour
 const START = 9 // 営業開始
 const END = 20 // 営業終了（最後の枠の終わり）
 const STEP = 15 // 予約の最小単位（分）
+const WD = ['日', '月', '火', '水', '木', '金', '土']
 
 const toMin = (t) => {
   const [h, m] = t.split(':').map(Number)
@@ -16,13 +18,24 @@ const toMin = (t) => {
 const minToStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 const toY = (min) => ((min - START * 60) / 60) * ROW_H
 
+const shiftDate = (iso, n) => {
+  const d = new Date(iso + 'T00:00:00')
+  d.setDate(d.getDate() + n)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const dateLabel = (iso) => {
+  const d = new Date(iso + 'T00:00:00')
+  return `${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）`
+}
+
 // 開始・終了の選択肢（9:00〜20:00を15分刻み）
 const TIME_OPTIONS = []
 for (let m = START * 60; m <= END * 60; m += STEP) TIME_OPTIONS.push(minToStr(m))
 
 // 新規予約の初期値
-const blank = (staff, start) => ({
+const blank = (date, staff, start) => ({
   id: null,
+  date,
   customerId: null,
   customer: '',
   staff: staff || STAFF[0],
@@ -35,25 +48,31 @@ const blank = (staff, start) => ({
 export default function Timetable() {
   const { reservations, customers, addReservation, updateReservation, deleteReservation } = useStore()
   const nav = useNavigate()
+  const [date, setDate] = useState(TODAY_ISO)
   const [editing, setEditing] = useState(null) // 編集中のフォーム or null
   const [drag, setDrag] = useState(null) // { id, deltaMin } ドラッグ中の表示用
+  const [now, setNow] = useState(new Date())
   const dragRef = useRef(null)
 
+  // 現在時刻ラインを1分ごとに更新
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  const dayList = reservations.filter((r) => r.date === date)
+  const isToday = date === TODAY_ISO
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  const showNow = isToday && nowMin >= START * 60 && nowMin <= END * 60
+
   const openEdit = (r) => setEditing({ ...r })
-  const openAdd = (staff, start) => setEditing(blank(staff, start))
+  const openAdd = (staff, start) => setEditing(blank(date, staff, start))
 
   // ---- ドラッグで時間をずらす ----
   function onPointerDown(e, r) {
     if (e.button != null && e.button !== 0) return
     e.currentTarget.setPointerCapture(e.pointerId)
-    dragRef.current = {
-      id: r.id,
-      startY: e.clientY,
-      origStart: toMin(r.start),
-      origEnd: toMin(r.end),
-      deltaMin: 0,
-      moved: false,
-    }
+    dragRef.current = { id: r.id, startY: e.clientY, origStart: toMin(r.start), origEnd: toMin(r.end), deltaMin: 0, moved: false }
   }
   function onPointerMove(e) {
     const d = dragRef.current
@@ -61,7 +80,6 @@ export default function Timetable() {
     const dy = e.clientY - d.startY
     if (Math.abs(dy) > 4) d.moved = true
     let deltaMin = Math.round((dy / ROW_H) * 60 / STEP) * STEP
-    // 営業時間内に収める
     const minDelta = START * 60 - d.origStart
     const maxDelta = END * 60 - d.origEnd
     deltaMin = Math.max(minDelta, Math.min(maxDelta, deltaMin))
@@ -74,12 +92,9 @@ export default function Timetable() {
     setDrag(null)
     if (!d) return
     if (d.moved && d.deltaMin !== 0) {
-      updateReservation(r.id, {
-        start: minToStr(d.origStart + d.deltaMin),
-        end: minToStr(d.origEnd + d.deltaMin),
-      })
+      updateReservation(r.id, { start: minToStr(d.origStart + d.deltaMin), end: minToStr(d.origEnd + d.deltaMin) })
     } else if (!d.moved) {
-      openEdit(r) // 動かさなければクリック＝編集
+      openEdit(r)
     }
   }
   function onPointerCancel() {
@@ -92,16 +107,26 @@ export default function Timetable() {
       <div className="page-head">
         <div>
           <h1>予約タイムテーブル</h1>
-          <p>2026-06-24（水） / 縦軸：時間 × 横軸：スタッフ</p>
+          <p>縦軸：時間 × 横軸：スタッフ / 日付を切り替えて先・前の予約も確認できます</p>
         </div>
         <button className="btn" onClick={() => openAdd()}>＋ 予約を追加</button>
+      </div>
+
+      <div className="tt-datebar">
+        <button className="datenav" onClick={() => setDate(shiftDate(date, -1))}>‹ 前日</button>
+        <div className="datecur">
+          <span className="d">{dateLabel(date)}</span>
+          <span className="c">{dayList.length} 件</span>
+        </div>
+        <button className="datenav" onClick={() => setDate(shiftDate(date, 1))}>翌日 ›</button>
+        {!isToday && <button className="datenav today" onClick={() => setDate(TODAY_ISO)}>今日へ</button>}
       </div>
 
       <div className="tt-legend">
         {Object.entries(RES_SOURCE_META).map(([k, m]) => (
           <span key={k} className="tt-leg"><i style={{ background: m.bar }} />{m.label}</span>
         ))}
-        <span className="tt-hint">💡 予約をドラッグで時間移動 / タップで編集 / 空き枠をタップで追加</span>
+        <span className="tt-hint">💡 ドラッグで時間移動 / タップで編集 / 空き枠タップで追加</span>
       </div>
 
       <div className="tt-wrap">
@@ -111,7 +136,7 @@ export default function Timetable() {
             {STAFF.map((s) => <div key={s}>{s}</div>)}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: `64px repeat(${STAFF.length}, 1fr)` }}>
+          <div className="tt-body" style={{ gridTemplateColumns: `64px repeat(${STAFF.length}, 1fr)` }}>
             {/* time column */}
             <div>
               {HOURS.map((h) => (
@@ -129,7 +154,7 @@ export default function Timetable() {
                     onClick={() => openAdd(staff, `${h}:00`)}
                   />
                 ))}
-                {reservations.filter((r) => r.staff === staff).map((r) => {
+                {dayList.filter((r) => r.staff === staff).map((r) => {
                   const dragging = drag && drag.id === r.id
                   const delta = dragging ? drag.deltaMin : 0
                   const sMin = toMin(r.start) + delta
@@ -139,12 +164,7 @@ export default function Timetable() {
                     <div
                       key={r.id}
                       className={'tt-appt' + (dragging ? ' dragging' : '')}
-                      style={{
-                        top: toY(sMin) + 2,
-                        height: toY(eMin) - toY(sMin) - 4,
-                        background: meta.bg,
-                        borderLeftColor: meta.bar,
-                      }}
+                      style={{ top: toY(sMin) + 2, height: toY(eMin) - toY(sMin) - 4, background: meta.bg, borderLeftColor: meta.bar }}
                       onPointerDown={(e) => onPointerDown(e, r)}
                       onPointerMove={onPointerMove}
                       onPointerUp={(e) => onPointerUp(e, r)}
@@ -159,6 +179,13 @@ export default function Timetable() {
                 })}
               </div>
             ))}
+
+            {/* 現在時刻ライン */}
+            {showNow && (
+              <div className="tt-now" style={{ top: toY(nowMin) }}>
+                <span className="tt-now-label">{minToStr(nowMin)}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -220,23 +247,25 @@ function ResModal({ form, customers, onClose, onSave, onDelete, onOpenCard }) {
           </div>
           <div className="field">
             <label>お客様名 <span className="required">*</span></label>
-            <input
-              value={f.customer}
-              onChange={(e) => set('customer', e.target.value)}
-              placeholder="例：田村 さん（電話）"
-            />
+            <input value={f.customer} onChange={(e) => set('customer', e.target.value)} placeholder="例：田村 さん（電話）" />
+          </div>
+          <div className="modal-row">
+            <div className="field">
+              <label>予約経路</label>
+              <select value={f.source} onChange={(e) => set('source', e.target.value)}>
+                {Object.entries(RES_SOURCE_META).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>担当スタッフ</label>
+              <select value={f.staff} onChange={(e) => set('staff', e.target.value)}>
+                {STAFF.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
           </div>
           <div className="field">
-            <label>予約経路</label>
-            <select value={f.source} onChange={(e) => set('source', e.target.value)}>
-              {Object.entries(RES_SOURCE_META).map(([k, m]) => <option key={k} value={k}>{m.label}</option>)}
-            </select>
-          </div>
-          <div className="field">
-            <label>担当スタッフ</label>
-            <select value={f.staff} onChange={(e) => set('staff', e.target.value)}>
-              {STAFF.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            <label>日付</label>
+            <input type="date" value={f.date} onChange={(e) => set('date', e.target.value)} />
           </div>
           <div className="modal-row">
             <div className="field">

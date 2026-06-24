@@ -36,7 +36,8 @@ export const G_REVIEW_META = {
 
 const visit = (date, staff, menu, note, recipe) => ({ date, staff, menu, note, recipe })
 
-export const sampleCustomers = [
+// 手書きの主要5名（リッチなデータ）。この後ろに自動生成95名を足して計100名にする。
+const handCustomers = [
   {
     id: 'c001',
     name: '山田 花子',
@@ -216,13 +217,165 @@ export const sampleCustomers = [
   },
 ]
 
-// 予約タイムテーブル（基準日: 2026-06-24）
-export const sampleReservations = [
-  { id: 'r1', customerId: 'c001', customer: '山田 花子', staff: '田中', start: '10:00', end: '11:30', menu: 'カット+カラー', source: 'line' },
-  { id: 'r2', customerId: 'c005', customer: '伊藤 大輔', staff: '田中', start: '12:00', end: '12:45', menu: 'カット', source: 'line' },
-  { id: 'r3', customerId: 'c003', customer: '鈴木 美咲', staff: '鈴木', start: '10:30', end: '12:30', menu: 'ブリーチ+カラー', source: 'line' },
-  { id: 'r4', customerId: 'c002', customer: '佐々木 健一', staff: '佐藤', start: '18:00', end: '19:00', menu: 'カット+パーマ', source: 'phone' },
-  { id: 'r5', customerId: 'c004', customer: '高橋 由美', staff: '高橋', start: '13:00', end: '14:00', menu: '白髪染め+スパ', source: 'phone' },
-  { id: 'r6', customerId: null, customer: '田村 さん（電話）', staff: '佐藤', start: '11:00', end: '12:00', menu: 'カット', source: 'phone' },
-  { id: 'r7', customerId: null, customer: '飛び込み', staff: '鈴木', start: '15:00', end: '15:30', menu: '前髪カット', source: 'walkin' },
+// 基準日(2026-06-24)の予約は手書きのまま使う（カリキュレーション生成は他の日に足す）
+const handReservations = [
+  { id: 'r1', date: '2026-06-24', customerId: 'c001', customer: '山田 花子', staff: '田中', start: '10:00', end: '11:30', menu: 'カット+カラー', source: 'line' },
+  { id: 'r2', date: '2026-06-24', customerId: 'c005', customer: '伊藤 大輔', staff: '田中', start: '12:00', end: '12:45', menu: 'カット', source: 'line' },
+  { id: 'r3', date: '2026-06-24', customerId: 'c003', customer: '鈴木 美咲', staff: '鈴木', start: '10:30', end: '12:30', menu: 'ブリーチ+カラー', source: 'line' },
+  { id: 'r4', date: '2026-06-24', customerId: 'c002', customer: '佐々木 健一', staff: '佐藤', start: '18:00', end: '19:00', menu: 'カット+パーマ', source: 'phone' },
+  { id: 'r5', date: '2026-06-24', customerId: 'c004', customer: '高橋 由美', staff: '高橋', start: '13:00', end: '14:00', menu: '白髪染め+スパ', source: 'phone' },
+  { id: 'r6', date: '2026-06-24', customerId: null, customer: '田村 さん（電話）', staff: '佐藤', start: '11:00', end: '12:00', menu: 'カット', source: 'phone' },
+  { id: 'r7', date: '2026-06-24', customerId: null, customer: '飛び込み', staff: '鈴木', start: '15:00', end: '15:30', menu: '前髪カット', source: 'walkin' },
 ]
+
+// ============================================================
+// ここから下：デモを“100名規模・複数日”に見せるための自動生成データ
+// 乱数は固定シードなので、誰が見ても毎回同じ内容になる（再現性あり）
+// ============================================================
+const BASE = new Date('2026-06-24T00:00:00')
+const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const dayOffset = (n) => { const d = new Date(BASE); d.setDate(d.getDate() + n); return fmt(d) }
+const minToStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+const rnd = mulberry32(20260624)
+const pick = (a) => a[Math.floor(rnd() * a.length)]
+const int = (lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1))
+
+const SEI = [['佐藤', 'サトウ'], ['鈴木', 'スズキ'], ['高橋', 'タカハシ'], ['田中', 'タナカ'], ['伊藤', 'イトウ'], ['渡辺', 'ワタナベ'], ['山本', 'ヤマモト'], ['中村', 'ナカムラ'], ['小林', 'コバヤシ'], ['加藤', 'カトウ'], ['吉田', 'ヨシダ'], ['山田', 'ヤマダ'], ['佐々木', 'ササキ'], ['山口', 'ヤマグチ'], ['松本', 'マツモト'], ['井上', 'イノウエ'], ['木村', 'キムラ'], ['林', 'ハヤシ'], ['斎藤', 'サイトウ'], ['清水', 'シミズ'], ['山崎', 'ヤマザキ'], ['森', 'モリ'], ['池田', 'イケダ'], ['橋本', 'ハシモト'], ['阿部', 'アベ'], ['石川', 'イシカワ'], ['中島', 'ナカジマ'], ['前田', 'マエダ'], ['藤田', 'フジタ'], ['岡田', 'オカダ']]
+const MEI_F = [['花子', 'ハナコ'], ['美咲', 'ミサキ'], ['由美', 'ユミ'], ['彩', 'アヤ'], ['恵', 'メグミ'], ['さくら', 'サクラ'], ['陽子', 'ヨウコ'], ['里奈', 'リナ'], ['真央', 'マオ'], ['美穂', 'ミホ'], ['七海', 'ナナミ'], ['結衣', 'ユイ'], ['遥', 'ハルカ'], ['楓', 'カエデ'], ['麻衣', 'マイ'], ['奈々', 'ナナ'], ['千尋', 'チヒロ'], ['茜', 'アカネ'], ['瞳', 'ヒトミ'], ['咲', 'サキ']]
+const MEI_M = [['大輔', 'ダイスケ'], ['健一', 'ケンイチ'], ['翔', 'ショウ'], ['拓也', 'タクヤ'], ['誠', 'マコト'], ['亮', 'リョウ'], ['和也', 'カズヤ'], ['直樹', 'ナオキ'], ['駿', 'シュン'], ['健太', 'ケンタ'], ['雄大', 'ユウダイ'], ['翔太', 'ショウタ'], ['大樹', 'ダイキ'], ['涼介', 'リョウスケ'], ['悠斗', 'ユウト'], ['颯太', 'ソウタ'], ['陽介', 'ヨウスケ'], ['修平', 'シュウヘイ'], ['竜也', 'タツヤ'], ['智也', 'トモヤ']]
+const F_MENUS = ['カット', 'カット+カラー', 'カット+カラー+TR', 'カット+パーマ', 'カット+ブリーチ+カラー', 'カット+白髪染め', '白髪染め', 'カット+縮毛矯正', 'カット+デジタルパーマ', 'トリートメント', 'カット+ヘッドスパ']
+const M_MENUS = ['カット', 'カット+眉カット', 'カット+メンズカラー', 'カット+メンズパーマ', 'カット+パーマ', 'ビジネスカット']
+const HAIR_TYPE = ['硬毛・多毛', '軟毛・普通量', '普通毛・普通量', '硬毛・少なめ', 'くせ毛・多毛', '猫っ毛・少なめ']
+const HAIR_COND = ['良好', 'ダメージ中', 'ダメージ大', '白髪20%', '白髪40%', 'カラー褪色', '乾燥']
+const SCALP = ['普通', '乾燥気味', '脂性', '敏感']
+const ALLERGY_POOL = ['ジアミン（弱）', 'ジアミン（強）', 'ラテックス', '香料', '金属']
+const NOTES = ['梅雨時に広がりやすい。', '根元のうねりが気になる。', '毛先のダメージを気にされている。', '短めキープを好む。', '低刺激剤を希望。', 'カラーの褪色が早め。', '']
+const PATTERNS = ['約4週間ごと', '約5週間ごと', '約6週間ごと', '約2ヶ月ごと', '約3ヶ月ごと・不定期']
+const SOURCES = ['hotpepper', 'instagram', 'google', 'referral', 'line']
+const RECIPES = ['オラ8-5 + OX4.5% 35分', '5NB + OX3% 40分', 'ケアブリーチ1回→9-Bv', 'ロッド中 1液N8分 / 2液5分', 'ノンジアミン 5NB OX3%', 'オラ7-1 + 6-7 = 2:1']
+
+function makeHistory(count, lastVisit, staff, gender) {
+  const menus = gender === '女性' ? F_MENUS : M_MENUS
+  const out = []
+  const d = new Date(lastVisit + 'T00:00:00')
+  for (let i = 0; i < count; i++) {
+    const menu = pick(menus)
+    const hasRecipe = /カラー|白髪|ブリーチ|パーマ|矯正/.test(menu) && rnd() < 0.8
+    out.push({
+      date: fmt(d),
+      staff,
+      menu,
+      note: rnd() < 0.3 ? pick(['少し明るめ希望', '暗めトーンに', '前回と同じで', '毛先を整える程度']) : '',
+      recipe: hasRecipe ? { note: pick(RECIPES) } : null,
+    })
+    d.setDate(d.getDate() - int(26, 45))
+  }
+  return out
+}
+
+function genCustomers(n) {
+  const statusPool = ['vip', 'regular', 'regular', 'regular', 'new', 'new', 'followup', 'dormant']
+  const gStates = ['未送信', '未送信', '依頼送信済', '投稿済']
+  const out = []
+  for (let i = 0; i < n; i++) {
+    const gender = rnd() < 0.62 ? '女性' : '男性'
+    const sei = pick(SEI)
+    const mei = pick(gender === '女性' ? MEI_F : MEI_M)
+    const status = pick(statusPool)
+    const staff = pick(STAFF)
+    let daysBack
+    if (status === 'dormant') daysBack = int(120, 320)
+    else if (status === 'followup') daysBack = int(60, 110)
+    else if (status === 'new') daysBack = int(3, 35)
+    else if (status === 'vip') daysBack = int(7, 45)
+    else daysBack = int(10, 55)
+    const lastVisit = dayOffset(-daysBack)
+    let visitCount
+    if (status === 'vip') visitCount = int(20, 40)
+    else if (status === 'regular') visitCount = int(8, 20)
+    else if (status === 'new') visitCount = int(1, 3)
+    else if (status === 'dormant') visitCount = int(6, 22)
+    else visitCount = int(5, 14)
+    const history = makeHistory(Math.min(visitCount, 10), lastVisit, staff, gender)
+    const id = 'g' + String(100 + i)
+    out.push({
+      id,
+      name: `${sei[0]} ${mei[0]}`,
+      kana: `${sei[1]} ${mei[1]}`,
+      gender,
+      birthday: `${int(1962, 2005)}-${String(int(1, 12)).padStart(2, '0')}-${String(int(1, 28)).padStart(2, '0')}`,
+      phone: `0${pick(['90', '80', '70'])}-${int(1000, 9999)}-${int(1000, 9999)}`,
+      email: `member${100 + i}@example.com`,
+      status,
+      source: pick(SOURCES),
+      lastVisit,
+      lastMenu: history[0].menu,
+      assignedStaff: staff,
+      visitCount,
+      totalSpent: visitCount * int(4500, 12000),
+      hair: { type: pick(HAIR_TYPE), condition: pick(HAIR_COND), scalp: pick(SCALP), notes: pick(NOTES) },
+      allergies: rnd() < 0.25 ? [pick(ALLERGY_POOL)] : [],
+      reservationPattern: pick(PATTERNS),
+      integrations: {
+        line: rnd() < 0.75 ? '連携済' : '未連携',
+        instagram: rnd() < 0.3 ? '@' + id : '未連携',
+        google: pick(gStates),
+      },
+      stepDelivery: [
+        { step: 1, title: '来店翌日サンクスメッセージ', status: '配信済', date: lastVisit },
+        { step: 2, title: '2週間後ホームケア案内', status: rnd() < 0.5 ? '配信済' : '予約', date: '-' },
+        { step: 3, title: '次回予約リマインド', status: '未配信', date: '-' },
+      ],
+      history,
+    })
+  }
+  return out
+}
+
+export const sampleCustomers = [...handCustomers, ...genCustomers(95)]
+
+function genReservations(registered) {
+  const out = []
+  const durPool = [45, 60, 60, 90, 30]
+  for (let off = -3; off <= 10; off++) {
+    if (off === 0) continue // 基準日は手書きを使う
+    const date = dayOffset(off)
+    for (const staff of STAFF) {
+      let h = 9
+      while (h <= 18) {
+        if (rnd() < 0.33) {
+          const startMin = h * 60 + pick([0, 30])
+          const dur = pick(durPool)
+          const endMin = Math.min(startMin + dur, 20 * 60)
+          let customerId = null, customer = '', menu = '', source = 'line'
+          if (rnd() < 0.65) {
+            const c = pick(registered)
+            customerId = c.id; customer = c.name; menu = c.lastMenu
+            source = c.integrations.line === '連携済' && rnd() < 0.85 ? 'line' : 'phone'
+          } else {
+            const sei = pick(SEI)
+            source = rnd() < 0.6 ? 'phone' : 'walkin'
+            customer = `${sei[0]} さん（${source === 'phone' ? '電話' : '来店'}）`
+            menu = pick(['カット', 'カット+カラー', 'カット+パーマ', '白髪染め'])
+          }
+          out.push({ id: `gr${off}_${staff}_${h}`, date, customerId, customer, staff, start: minToStr(startMin), end: minToStr(endMin), menu, source })
+          h += Math.max(1, Math.ceil(dur / 60))
+        } else {
+          h += 1
+        }
+      }
+    }
+  }
+  return out
+}
+
+export const sampleReservations = [...handReservations, ...genReservations(sampleCustomers)]
