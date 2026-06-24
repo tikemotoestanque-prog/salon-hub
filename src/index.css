@@ -185,6 +185,29 @@ a { color: inherit; text-decoration: none; }
 
 .empty { text-align: center; padding: 50px 20px; color: var(--muted); }
 
+/* customer LINE-style preview */
+.lineprev { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.lineprev .cap { font-size: 11px; color: var(--muted); max-width: 380px; text-align: center; line-height: 1.5; }
+.phone { width: 100%; max-width: 380px; border-radius: 24px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--line); }
+.phone .lbar { background: #06c755; color: #fff; padding: 12px 16px; display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+.phone .lbar .back { font-size: 20px; line-height: 1; opacity: 0.9; }
+.ltalk { background: #aebfd4; padding: 14px 12px; display: flex; flex-direction: column; gap: 12px; max-height: 560px; overflow-y: auto; }
+.lmsg { display: flex; gap: 8px; align-items: flex-start; max-width: 88%; }
+.lav { width: 30px; height: 30px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+.lname { font-size: 10px; color: #3c4a5e; margin: 0 0 3px 2px; }
+.lbub { background: #fff; padding: 9px 12px; border-radius: 4px 16px 16px 16px; font-size: 13px; line-height: 1.55; color: #222; white-space: pre-wrap; box-shadow: 0 1px 1px rgba(0,0,0,0.07); }
+.lcard { background: #fff; border-radius: 14px; overflow: hidden; width: 230px; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+.lcard .hd { background: var(--accent); color: #fff; padding: 10px 12px; font-weight: 700; font-size: 13px; }
+.lcard .bd { padding: 10px 12px; display: grid; gap: 7px; }
+.lcard .bd .r { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+.lcard .bd .r span { color: var(--muted); }
+.lcard .bd .r b { color: var(--ink); text-align: right; }
+.lcard .cta { padding: 10px; text-align: center; color: var(--accent); font-weight: 700; border-top: 1px solid var(--line); font-size: 13px; }
+.lmenu { display: grid; grid-template-columns: repeat(3, 1fr); background: #fff; }
+.lmenu .mi { padding: 12px 6px; font-size: 11px; color: #333; display: flex; flex-direction: column; align-items: center; gap: 5px; border-right: 1px solid var(--line); border-top: 1px solid var(--line); }
+.lmenu .mi:last-child { border-right: none; }
+.lmenu .ic { font-size: 20px; }
+
 @media (max-width: 820px) {
   .detail-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }

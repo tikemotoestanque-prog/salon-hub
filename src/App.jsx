@@ -6,6 +6,7 @@ import Timetable from './pages/Timetable.jsx'
 import FollowUpAlerts from './pages/FollowUpAlerts.jsx'
 import NewCustomer from './pages/NewCustomer.jsx'
 import EditCustomer from './pages/EditCustomer.jsx'
+import CustomerMyPage from './pages/CustomerMyPage.jsx'
 import TreatmentRecord from './pages/TreatmentRecord.jsx'
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/" element={<CustomerList />} />
           <Route path="/customer/:id" element={<CustomerDetail />} />
           <Route path="/customer/:id/edit" element={<EditCustomer />} />
+          <Route path="/m/:id" element={<CustomerMyPage />} />
           <Route path="/timetable" element={<Timetable />} />
           <Route path="/alerts" element={<FollowUpAlerts />} />
           <Route path="/new" element={<NewCustomer />} />

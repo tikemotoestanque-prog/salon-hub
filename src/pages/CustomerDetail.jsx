@@ -45,7 +45,8 @@ export default function CustomerDetail() {
             {d != null && <span className="pill">前回 {d} 日前</span>}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button className="btn ghost" onClick={() => nav('/m/' + c.id)}>📱 お客さん画面</button>
           <button className="btn ghost" onClick={() => nav('/customer/' + c.id + '/edit')}>✏️ 編集</button>
           <button className="btn" onClick={() => nav('/record/' + c.id)}>＋ 施術記録</button>
         </div>
