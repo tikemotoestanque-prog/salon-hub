@@ -47,6 +47,13 @@ export function StoreProvider({ children }) {
     return id
   }
 
+  const updateCustomer = (id, fields) => {
+    setState((s) => ({
+      ...s,
+      customers: s.customers.map((c) => (c.id === id ? { ...c, ...fields } : c)),
+    }))
+  }
+
   const addTreatment = (customerId, record) => {
     setState((s) => ({
       ...s,
@@ -68,7 +75,7 @@ export function StoreProvider({ children }) {
   const resetData = () => setState({ customers: sampleCustomers, reservations: sampleReservations })
 
   return (
-    <StoreContext.Provider value={{ ...state, addCustomer, addTreatment, resetData }}>
+    <StoreContext.Provider value={{ ...state, addCustomer, updateCustomer, addTreatment, resetData }}>
       {children}
     </StoreContext.Provider>
   )
