@@ -19,6 +19,14 @@ export const SOURCE_META = {
   line: { label: '公式LINE', color: '#06c755', bg: '#e2f7ea' },
 }
 
+// 予約の経路（どこから入った予約か）。LINE以外も色で見分けられるように
+export const RES_SOURCE_META = {
+  line: { label: '公式LINE', short: 'LINE', color: '#06c755', bg: '#e2f7ea', bar: '#06c755' },
+  phone: { label: '電話', short: '電話', color: '#c25e00', bg: '#fff1e3', bar: '#e08a1e' },
+  walkin: { label: '来店・店頭', short: '来店', color: '#1f7a8c', bg: '#e3f4f7', bar: '#1f7a8c' },
+  other: { label: 'その他', short: '他', color: '#6b6b6b', bg: '#eef0f2', bar: '#9b8e85' },
+}
+
 // Googleクチコミ依頼の状態（未送信 → 依頼送信済 → 投稿済）
 export const G_REVIEW_META = {
   未送信: { label: '未送信', cls: 's-none' },
@@ -210,11 +218,11 @@ export const sampleCustomers = [
 
 // 予約タイムテーブル（基準日: 2026-06-24）
 export const sampleReservations = [
-  { id: 'r1', customerId: 'c001', customer: '山田 花子', staff: '田中', start: '10:00', end: '11:30', menu: 'カット+カラー' },
-  { id: 'r2', customerId: 'c005', customer: '伊藤 大輔', staff: '田中', start: '12:00', end: '12:45', menu: 'カット' },
-  { id: 'r3', customerId: 'c003', customer: '鈴木 美咲', staff: '鈴木', start: '10:30', end: '12:30', menu: 'ブリーチ+カラー' },
-  { id: 'r4', customerId: 'c002', customer: '佐々木 健一', staff: '佐藤', start: '18:00', end: '19:00', menu: 'カット+パーマ' },
-  { id: 'r5', customerId: 'c004', customer: '高橋 由美', staff: '高橋', start: '13:00', end: '14:00', menu: '白髪染め+スパ' },
-  { id: 'r6', customerId: 'c001', customer: '新規 予約', staff: '佐藤', start: '11:00', end: '12:00', menu: 'カット' },
-  { id: 'r7', customerId: 'c005', customer: '店販 相談', staff: '鈴木', start: '15:00', end: '15:30', menu: 'カウンセリング' },
+  { id: 'r1', customerId: 'c001', customer: '山田 花子', staff: '田中', start: '10:00', end: '11:30', menu: 'カット+カラー', source: 'line' },
+  { id: 'r2', customerId: 'c005', customer: '伊藤 大輔', staff: '田中', start: '12:00', end: '12:45', menu: 'カット', source: 'line' },
+  { id: 'r3', customerId: 'c003', customer: '鈴木 美咲', staff: '鈴木', start: '10:30', end: '12:30', menu: 'ブリーチ+カラー', source: 'line' },
+  { id: 'r4', customerId: 'c002', customer: '佐々木 健一', staff: '佐藤', start: '18:00', end: '19:00', menu: 'カット+パーマ', source: 'phone' },
+  { id: 'r5', customerId: 'c004', customer: '高橋 由美', staff: '高橋', start: '13:00', end: '14:00', menu: '白髪染め+スパ', source: 'phone' },
+  { id: 'r6', customerId: null, customer: '田村 さん（電話）', staff: '佐藤', start: '11:00', end: '12:00', menu: 'カット', source: 'phone' },
+  { id: 'r7', customerId: null, customer: '飛び込み', staff: '鈴木', start: '15:00', end: '15:30', menu: '前髪カット', source: 'walkin' },
 ]

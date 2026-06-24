@@ -72,10 +72,27 @@ export function StoreProvider({ children }) {
     }))
   }
 
+  const addReservation = (r) => {
+    const id = 'r' + String(Date.now()).slice(-6)
+    setState((s) => ({ ...s, reservations: [...s.reservations, { id, ...r }] }))
+    return id
+  }
+
+  const updateReservation = (id, fields) => {
+    setState((s) => ({
+      ...s,
+      reservations: s.reservations.map((r) => (r.id === id ? { ...r, ...fields } : r)),
+    }))
+  }
+
+  const deleteReservation = (id) => {
+    setState((s) => ({ ...s, reservations: s.reservations.filter((r) => r.id !== id) }))
+  }
+
   const resetData = () => setState({ customers: sampleCustomers, reservations: sampleReservations })
 
   return (
-    <StoreContext.Provider value={{ ...state, addCustomer, updateCustomer, addTreatment, resetData }}>
+    <StoreContext.Provider value={{ ...state, addCustomer, updateCustomer, addTreatment, addReservation, updateReservation, deleteReservation, resetData }}>
       {children}
     </StoreContext.Provider>
   )
