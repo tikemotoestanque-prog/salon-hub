@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
-import { STATUS_META, SOURCE_META, STAFF } from '../data/sampleData.js'
+import { STATUS_META, SOURCE_META, STAFF, G_REVIEW_META } from '../data/sampleData.js'
+import { gReview } from '../utils.js'
 
 // 顧客オブジェクト（入れ子）→ フォーム（平たい形）に変換
 function toForm(c) {
@@ -16,6 +17,7 @@ function toForm(c) {
     allergies: (c.allergies || []).join('、'),
     line: c.integrations?.line === '連携済',
     instagram: c.integrations?.instagram && c.integrations.instagram !== '未連携' ? c.integrations.instagram : '',
+    googleReview: gReview(c.integrations?.google),
   }
 }
 
@@ -47,9 +49,10 @@ export default function EditCustomer() {
       hair: { type: f.hairType, condition: f.hairCondition, scalp: f.scalp, notes: f.hairNotes },
       allergies: f.allergies ? f.allergies.split(/[、,]/).map((s) => s.trim()).filter(Boolean) : [],
       integrations: {
-        ...c.integrations,
         line: f.line ? '連携済' : '未連携',
         instagram: f.instagram || '未連携',
+        google: f.googleReview,
+        googleDate: c.integrations?.googleDate,
       },
     })
     nav('/customer/' + id)
@@ -135,6 +138,12 @@ export default function EditCustomer() {
             <label htmlFor="line" style={{ color: 'var(--ink)' }}>公式LINE連携済</label>
           </div>
           <div className="field"><label>Instagram</label><input value={f.instagram} onChange={set('instagram')} placeholder="@account" /></div>
+          <div className="field">
+            <label>Googleクチコミ依頼</label>
+            <select value={f.googleReview} onChange={set('googleReview')}>
+              {Object.keys(G_REVIEW_META).map((k) => <option key={k} value={k}>{G_REVIEW_META[k].label}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className="form-actions">

@@ -1,14 +1,15 @@
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { StatusBadge, SourceBadge } from '../components/Badges.jsx'
-import { initials, daysSince, yen } from '../utils.js'
+import { G_REVIEW_META } from '../data/sampleData.js'
+import { initials, daysSince, yen, gReview, TODAY_ISO } from '../utils.js'
 
 const STEP_CLASS = { '配信済': 's-done', '予約': 's-sched', '未配信': 's-none', '未対応': 's-todo', '未送信': 's-none' }
 
 export default function CustomerDetail() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { customers } = useStore()
+  const { customers, updateCustomer } = useStore()
   const c = customers.find((x) => x.id === id)
 
   if (!c) {
@@ -22,6 +23,10 @@ export default function CustomerDetail() {
 
   const d = daysSince(c.lastVisit)
   const last10 = c.history.slice(0, 10)
+
+  const gStatus = gReview(c.integrations?.google)
+  const gMeta = G_REVIEW_META[gStatus]
+  const setG = (status) => updateCustomer(c.id, { integrations: { ...c.integrations, google: status, googleDate: TODAY_ISO } })
 
   return (
     <div>
@@ -120,9 +125,29 @@ export default function CustomerDetail() {
             <dl className="kv">
               <dt>公式LINE</dt><dd>{c.integrations?.line}</dd>
               <dt>Instagram</dt><dd>{c.integrations?.instagram}</dd>
-              <dt>Google</dt><dd>{c.integrations?.google}</dd>
-              <dt>ホットペッパー</dt><dd>{c.integrations?.hotpepper}</dd>
+              <dt>Googleクチコミ</dt>
+              <dd>
+                <span className={'step-status ' + gMeta.cls}>{gMeta.label}</span>
+                {c.integrations?.googleDate && (
+                  <span style={{ marginLeft: 8, fontSize: 11, color: 'var(--muted)' }}>{c.integrations.googleDate}</span>
+                )}
+              </dd>
             </dl>
+            <div style={{ marginTop: 12 }}>
+              {gStatus === '未送信' && (
+                <button className="btn ghost" style={{ width: '100%' }} onClick={() => setG('依頼送信済')}>
+                  📨 クチコミ依頼を送信
+                </button>
+              )}
+              {gStatus === '依頼送信済' && (
+                <button className="btn ghost" style={{ width: '100%' }} onClick={() => setG('投稿済')}>
+                  ✓ 投稿を確認できた
+                </button>
+              )}
+              {gStatus === '投稿済' && (
+                <div style={{ fontSize: 12, color: 'var(--muted)' }}>🎉 クチコミ投稿済み。お礼メッセージも自動で送れます。</div>
+              )}
+            </div>
           </div>
 
           <div className="card section">

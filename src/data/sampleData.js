@@ -19,6 +19,13 @@ export const SOURCE_META = {
   line: { label: '公式LINE', color: '#06c755', bg: '#e2f7ea' },
 }
 
+// Googleクチコミ依頼の状態（未送信 → 依頼送信済 → 投稿済）
+export const G_REVIEW_META = {
+  未送信: { label: '未送信', cls: 's-none' },
+  依頼送信済: { label: '依頼送信済', cls: 's-sched' },
+  投稿済: { label: '投稿済', cls: 's-done' },
+}
+
 const visit = (date, staff, menu, note, recipe) => ({ date, staff, menu, note, recipe })
 
 export const sampleCustomers = [
@@ -40,7 +47,7 @@ export const sampleCustomers = [
     hair: { type: '硬毛・多毛', condition: 'ダメージ中', scalp: '乾燥気味', notes: 'うねりが出やすい。梅雨時は特に広がる。' },
     allergies: ['ジアミン（弱）', 'ラテックス'],
     reservationPattern: '約5週間ごと・土曜午前を好む',
-    integrations: { line: '連携済', instagram: '@hanako_y', google: 'クチコミ投稿済', hotpepper: '会員ID: HP-88213' },
+    integrations: { line: '連携済', instagram: '@hanako_y', google: '投稿済', googleDate: '2026-06-12' },
     stepDelivery: [
       { step: 1, title: '来店翌日サンクスメッセージ', status: '配信済', date: '2026-06-11' },
       { step: 2, title: '2週間後ホームケア案内', status: '配信済', date: '2026-06-24' },
@@ -77,7 +84,7 @@ export const sampleCustomers = [
     hair: { type: '軟毛・普通量', condition: '良好', scalp: '脂性', notes: 'クセが弱く、パーマがとれやすい。' },
     allergies: [],
     reservationPattern: '約2ヶ月ごと・平日夜を好む',
-    integrations: { line: '連携済', instagram: '未連携', google: '未投稿', hotpepper: '未登録' },
+    integrations: { line: '連携済', instagram: '未連携', google: '依頼送信済', googleDate: '2026-04-02' },
     stepDelivery: [
       { step: 1, title: '来店翌日サンクスメッセージ', status: '配信済', date: '2026-04-02' },
       { step: 2, title: '60日経過フォローDM', status: '配信済', date: '2026-05-31' },
@@ -114,7 +121,7 @@ export const sampleCustomers = [
     hair: { type: '普通毛・普通量', condition: 'ブリーチ毛・ダメージ大', scalp: '敏感', notes: 'ブリーチ履歴あり。頭皮がしみやすいので保護必須。' },
     allergies: ['ジアミン（強）'],
     reservationPattern: 'まだ来店2回・パターン未確定',
-    integrations: { line: '連携済', instagram: '@misaki_0105', google: '未投稿', hotpepper: '未登録' },
+    integrations: { line: '連携済', instagram: '@misaki_0105', google: '未送信' },
     stepDelivery: [
       { step: 1, title: '初回来店お礼+next案内', status: '配信済', date: '2026-06-21' },
       { step: 2, title: '1週間後カラー褪色ケア', status: '予約', date: '2026-06-27' },
@@ -143,7 +150,7 @@ export const sampleCustomers = [
     hair: { type: '硬毛・少なめ', condition: '白髪40%', scalp: '乾燥・敏感', notes: '白髪が気になり始め周期が短め。低刺激剤を希望。' },
     allergies: ['ジアミン（弱）', '香料'],
     reservationPattern: '約4週間ごとだったが直近離脱',
-    integrations: { line: '未連携', instagram: '未連携', google: 'クチコミ投稿済', hotpepper: '会員ID: HP-44120' },
+    integrations: { line: '未連携', instagram: '未連携', google: '投稿済', googleDate: '2026-02-16' },
     stepDelivery: [
       { step: 1, title: '来店翌日サンクスメッセージ', status: '配信済', date: '2026-02-16' },
       { step: 2, title: '60日未来店アラート→架電', status: '未対応', date: '-' },
@@ -180,7 +187,7 @@ export const sampleCustomers = [
     hair: { type: '普通毛・多毛', condition: '良好', scalp: '普通', notes: '襟足が伸びやすい。短めキープを好む。' },
     allergies: [],
     reservationPattern: '約4週間ごと・日曜午前固定',
-    integrations: { line: '連携済', instagram: '未連携', google: 'クチコミ投稿済', hotpepper: '未登録' },
+    integrations: { line: '連携済', instagram: '未連携', google: '投稿済', googleDate: '2026-05-31' },
     stepDelivery: [
       { step: 1, title: '来店翌日サンクスメッセージ', status: '配信済', date: '2026-05-31' },
       { step: 2, title: '4週間後リマインド', status: '予約', date: '2026-06-27' },

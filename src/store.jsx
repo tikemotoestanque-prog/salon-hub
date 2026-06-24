@@ -31,7 +31,7 @@ export function StoreProvider({ children }) {
       hair: { type: c.hairType || '', condition: c.hairCondition || '', scalp: c.scalp || '', notes: c.hairNotes || '' },
       allergies: c.allergies ? c.allergies.split(/[、,]/).map((s) => s.trim()).filter(Boolean) : [],
       reservationPattern: c.reservationPattern || 'パターン未確定',
-      integrations: { line: c.line ? '連携済' : '未連携', instagram: c.instagram || '未連携', google: '未投稿', hotpepper: '未登録' },
+      integrations: { line: c.line ? '連携済' : '未連携', instagram: c.instagram || '未連携', google: '未送信' },
       stepDelivery: [{ step: 1, title: '初回来店お礼', status: '予約', date: '-' }],
       history: [],
       name: c.name,
