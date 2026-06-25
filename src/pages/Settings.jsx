@@ -5,6 +5,7 @@ export default function Settings() {
   const { settings, updateSettings, recomputeAll } = useStore()
 
   const [staff, setStaff] = useState(settings.staff)
+  const [capacity, setCapacity] = useState(settings.capacity || {})
   const [menus, setMenus] = useState(settings.menus)
   const [th, setTh] = useState(settings.thresholds)
   const [statusList, setStatusList] = useState(
@@ -32,8 +33,12 @@ export default function Settings() {
   const persist = () => {
     const statuses = {}
     statusList.forEach((s) => { if (s.key && s.label) statuses[s.key] = { label: s.label, icon: s.icon, color: s.color, bg: s.bg } })
+    const cleanStaff = staff.map((s) => s.trim()).filter(Boolean)
+    const cap = {}
+    cleanStaff.forEach((s) => { cap[s] = Number(capacity[s]) || 1 })
     updateSettings({
-      staff: staff.map((s) => s.trim()).filter(Boolean),
+      staff: cleanStaff,
+      capacity: cap,
       menus: menus.map((s) => s.trim()).filter(Boolean),
       thresholds: {
         newMaxVisits: Number(th.newMaxVisits), vipVisits: Number(th.vipVisits), vipSpent: Number(th.vipSpent),
@@ -75,9 +80,15 @@ export default function Settings() {
       {/* スタッフ */}
       <div className="card section">
         <h3>👥 スタッフ</h3>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>「同時対応」は、そのスタイリストが同じ時間に何名まで担当できるか（予約の空き判定に使われます）。</p>
         {staff.map((s, i) => (
           <div className="row-edit" key={i}>
             <input value={s} onChange={(e) => setStaffAt(i, e.target.value)} placeholder="スタッフ名" />
+            <label className="cap-edit">同時
+              <select value={capacity[s] || 1} onChange={(e) => setCapacity({ ...capacity, [s]: Number(e.target.value) })}>
+                <option value={1}>1名</option><option value={2}>2名</option><option value={3}>3名</option>
+              </select>
+            </label>
             <button className="btn ghost danger sm" onClick={() => delStaff(i)}>削除</button>
           </div>
         ))}

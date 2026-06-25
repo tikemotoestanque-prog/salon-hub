@@ -54,6 +54,20 @@ export function computePattern(history) {
   return `平均${a}日周期（直近${Math.min(history.length, 10)}回）`
 }
 
+// 予約の空き判定（スタイリストの同時対応人数 capacity を考慮）
+const _toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+export function staffCap(capacity, staff) { return (capacity && capacity[staff]) || 1 }
+// 指定スタッフ・日付・時間帯が空いているか（同時対応人数の範囲内か）
+export function slotFree(reservations, date, staff, start, dur, capacity) {
+  const s = _toMin(start), e = s + dur
+  const overlapping = reservations.filter((r) => r.date === date && r.staff === staff && _toMin(r.start) < e && _toMin(r.end) > s).length
+  return overlapping < staffCap(capacity, staff)
+}
+// おまかせ時、その時間に空きのあるスタッフを1人返す（なければ null）
+export function pickFreeStaff(reservations, date, start, dur, capacity, staffList) {
+  return staffList.find((s) => slotFree(reservations, date, s, start, dur, capacity)) || null
+}
+
 // 来店回数・累計・最終来店日からステータスを自動判定（設定の閾値を使う）
 export function computeStatus(c, th) {
   const days = daysSince(c.lastVisit)

@@ -27,7 +27,7 @@ export default function LandingPage() {
           <h1>あなたの「似合う」を、<br />ずっと覚えているサロン。</h1>
           <p>カルテ・薬剤レシピ・髪の悩みをすべて記録。次に来たときも、いつものあなたに最適な提案を。</p>
           <div className="lp-cta">
-            <button className="lp-btn line" onClick={() => nav('/new?source=line')}>📲 LINEで予約する</button>
+            <button className="lp-btn line" onClick={() => nav('/book')}>📲 LINEで予約する</button>
             <a className="lp-btn tel" href="tel:0312345678" onClick={(e) => e.preventDefault()}>📞 電話で予約</a>
           </div>
           <div className="lp-note">＊LINE登録で、次回予約・クーポン・マイカルテがすべてLINEに届きます</div>
@@ -95,7 +95,7 @@ export default function LandingPage() {
       <section className="lp-foot">
         <h2>ご予約はLINEがいちばん簡単です</h2>
         <p>友だち追加 → トークから予約 → 来店後はマイカルテとリマインドが自動で届きます。</p>
-        <button className="lp-btn line big" onClick={() => nav('/new?source=line')}>📲 LINEで予約する</button>
+        <button className="lp-btn line big" onClick={() => nav('/book')}>📲 LINEで予約する</button>
       </section>
     </div>
   )

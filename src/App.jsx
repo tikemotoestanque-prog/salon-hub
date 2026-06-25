@@ -12,9 +12,10 @@ import CustomerPortal from './pages/CustomerPortal.jsx'
 import TreatmentRecord from './pages/TreatmentRecord.jsx'
 import Settings from './pages/Settings.jsx'
 import LandingPage from './pages/LandingPage.jsx'
+import GuestBooking from './pages/GuestBooking.jsx'
 
 // お客様向け（管理画面のヘッダーを出さない独立ページ）
-const CUSTOMER_PREFIXES = ['/lp', '/u/']
+const CUSTOMER_PREFIXES = ['/lp', '/u/', '/book']
 
 export default function App() {
   const { resetData } = useStore()
@@ -35,6 +36,7 @@ export default function App() {
       <Route path="/record/:id" element={<TreatmentRecord />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/lp" element={<LandingPage />} />
+      <Route path="/book" element={<GuestBooking />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )

@@ -34,6 +34,8 @@ export const DEFAULT_MENUS = ['カット', 'カット+カラー', 'カット+カ
 export const DEFAULT_THRESHOLDS = { newMaxVisits: 2, vipVisits: 20, vipSpent: 250000, followupDays: 60, dormantDays: 90 }
 export const DEFAULT_SETTINGS = {
   staff: [...STAFF],
+  // スタイリストごとの同時対応人数（2なら同じ時間に2件まで予約可）
+  capacity: STAFF.reduce((a, s) => { a[s] = s === '佐藤' ? 2 : 1; return a }, {}),
   menus: [...DEFAULT_MENUS],
   statuses: STATUS_META,
   thresholds: { ...DEFAULT_THRESHOLDS },
