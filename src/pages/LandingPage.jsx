@@ -23,7 +23,7 @@ export default function LandingPage() {
       {/* HERO */}
       <section className="lp-hero">
         <div className="lp-hero-in">
-          <div className="lp-logo">✂️ Hair Salon GRACE</div>
+          <div className="lp-logo">HAIR SALON GRACE</div>
           <h1>あなたの「似合う」を、<br />ずっと覚えているサロン。</h1>
           <p>カルテ・薬剤レシピ・髪の悩みをすべて記録。次に来たときも、いつものあなたに最適な提案を。</p>
           <div className="lp-cta">
@@ -36,6 +36,7 @@ export default function LandingPage() {
 
       {/* MENU */}
       <section className="lp-sec">
+        <div className="lp-eyebrow">MENU & PRICE</div>
         <h2>メニュー & 料金</h2>
         <div className="lp-menu">
           {menus.map((mn) => (
@@ -50,6 +51,7 @@ export default function LandingPage() {
 
       {/* STAFF */}
       <section className="lp-sec alt">
+        <div className="lp-eyebrow">STYLIST</div>
         <h2>スタイリスト</h2>
         <div className="lp-staff">
           {settings.staff.map((s) => (
@@ -64,6 +66,7 @@ export default function LandingPage() {
 
       {/* REVIEWS */}
       <section className="lp-sec">
+        <div className="lp-eyebrow">VOICE</div>
         <h2>お客様の声</h2>
         <div className="lp-reviews">
           {REVIEWS.map((r, i) => (
@@ -78,6 +81,7 @@ export default function LandingPage() {
 
       {/* INFO */}
       <section className="lp-sec alt">
+        <div className="lp-eyebrow">INFORMATION</div>
         <h2>店舗情報</h2>
         <dl className="lp-info">
           <dt>営業時間</dt><dd>10:00 – 20:00（最終受付 19:00）</dd>
