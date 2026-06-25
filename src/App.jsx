@@ -8,6 +8,7 @@ import FollowUpAlerts from './pages/FollowUpAlerts.jsx'
 import NewCustomer from './pages/NewCustomer.jsx'
 import EditCustomer from './pages/EditCustomer.jsx'
 import CustomerMyPage from './pages/CustomerMyPage.jsx'
+import CustomerPortal from './pages/CustomerPortal.jsx'
 import TreatmentRecord from './pages/TreatmentRecord.jsx'
 import Settings from './pages/Settings.jsx'
 import LandingPage from './pages/LandingPage.jsx'
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/customer/:id" element={<CustomerDetail />} />
           <Route path="/customer/:id/edit" element={<EditCustomer />} />
           <Route path="/m/:id" element={<CustomerMyPage />} />
+          <Route path="/u/:id" element={<CustomerPortal />} />
           <Route path="/timetable" element={<Timetable />} />
           <Route path="/alerts" element={<FollowUpAlerts />} />
           <Route path="/new" element={<NewCustomer />} />

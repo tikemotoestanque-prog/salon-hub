@@ -380,6 +380,71 @@ a { color: inherit; text-decoration: none; }
 /* 新規登録のLINE流入バナー */
 .lp-flash { background: #e2f7ea; border: 1px solid #9fe0bd; color: #06713a; padding: 12px 16px; border-radius: 10px; font-size: 13px; margin-bottom: 16px; }
 
+/* ===== お客様マイページ（顧客向けポータル） ===== */
+.cp { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cp-frame { width: 100%; max-width: 430px; background: #f4f0ea; border-radius: 22px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--line); display: flex; flex-direction: column; min-height: 620px; }
+.cp-bar { background: linear-gradient(145deg, #5f5346, #7c6d5c 60%, #9c8b77); color: #f5efe6; padding: 16px 18px; display: flex; flex-direction: column; gap: 2px; }
+.cp-salon { font-size: 12px; letter-spacing: 4px; opacity: 0.85; }
+.cp-user { font-size: 17px; font-weight: 600; letter-spacing: 1px; }
+.cp-body { flex: 1; padding: 18px 16px 22px; overflow-y: auto; }
+.cp-tabs { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); background: #fff; }
+.cp-tab { border: none; background: none; padding: 10px 4px; font-size: 11px; color: #9a8c7c; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; }
+.cp-tab span { font-size: 19px; }
+.cp-tab.on { color: #5f5346; font-weight: 700; background: #f4f0ea; }
+.cp-note { font-size: 11px; color: var(--muted); max-width: 430px; text-align: center; line-height: 1.6; }
+
+.cp-sec { display: flex; flex-direction: column; }
+.cp-h { font-size: 13px; font-weight: 700; color: #5f5346; letter-spacing: 1px; margin: 18px 0 10px; }
+.cp-muted { color: #9a8c7c; font-size: 12px; }
+
+/* karte */
+.cp-card { background: linear-gradient(145deg, #5f5346, #7c6d5c 60%, #9c8b77); color: #f5efe6; border-radius: 16px; padding: 18px; }
+.cp-rank { display: inline-block; font-size: 11px; letter-spacing: 2px; background: rgba(245,239,230,0.2); padding: 3px 12px; border-radius: 999px; }
+.cp-name { font-size: 22px; font-weight: 600; margin: 10px 0 14px; letter-spacing: 1px; }
+.cp-name small { font-size: 12px; font-weight: 400; opacity: 0.8; margin-left: 8px; letter-spacing: 1px; }
+.cp-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.cp-stats > div { background: rgba(255,255,255,0.12); border-radius: 10px; padding: 10px 4px; }
+.cp-stats b { display: block; font-size: 17px; }
+.cp-stats span { font-size: 10px; opacity: 0.85; }
+.cp-kv { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 6px 14px; margin-top: 14px; }
+.cp-kv .r { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.cp-kv .r:last-child { border-bottom: none; }
+.cp-kv .r span { color: #9a8c7c; }
+.cp-kv .r b { text-align: right; color: #4a4036; }
+.cp-hist { display: flex; flex-direction: column; gap: 8px; }
+.cp-hi { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; }
+.cp-hi .dt { font-size: 11px; color: #9a8c7c; }
+.cp-hi .mn { font-size: 13px; color: #4a4036; margin-top: 2px; }
+
+/* book */
+.cp-field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.cp-field span { font-size: 12px; color: #9a8c7c; font-weight: 600; }
+.cp-field select, .cp-field input { width: 100%; padding: 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 15px; background: #fff; }
+.cp-btn { width: 100%; border: none; background: linear-gradient(145deg, #5f5346, #7c6d5c); color: #f5efe6; padding: 15px; border-radius: 10px; font-size: 15px; font-weight: 600; letter-spacing: 2px; cursor: pointer; margin-top: 6px; }
+.cp-btn:hover { filter: brightness(1.06); }
+.cp-btn.ghost { background: none; color: #5f5346; border: 1px solid #c9bba8; margin-top: 16px; }
+.cp-done { text-align: center; padding: 20px 4px; }
+.cp-done .ic { width: 60px; height: 60px; border-radius: 50%; background: #e2f0e6; color: #2f8f57; font-size: 30px; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; }
+.cp-done h3 { margin: 0; font-size: 18px; color: #4a4036; }
+
+/* card / 会員証 */
+.cp-member { background: linear-gradient(135deg, #4a4036, #6f6053 55%, #8a7a66); color: #f5efe6; border-radius: 16px; padding: 18px; box-shadow: 0 6px 18px rgba(60,45,30,0.25); }
+.cp-member-top { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 2px; opacity: 0.9; }
+.cp-member-name { font-size: 20px; font-weight: 600; margin-top: 18px; letter-spacing: 1px; }
+.cp-member-no { font-size: 13px; opacity: 0.85; letter-spacing: 2px; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.cp-barcode { display: flex; align-items: flex-end; gap: 2px; height: 44px; background: #fff; border-radius: 6px; padding: 8px 10px; margin: 14px 0 10px; overflow: hidden; }
+.cp-barcode i { display: block; height: 100%; background: #2b2b2b; }
+.cp-member-foot { font-size: 10px; opacity: 0.85; text-align: center; }
+.cp-stamps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.cp-stamp { aspect-ratio: 1; border-radius: 50%; border: 1px solid #d8ccbb; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #b8a890; background: #fff; }
+.cp-stamp.on { background: #8a7660; color: #fff; border-color: #8a7660; }
+.cp-coupon { display: flex; align-items: center; gap: 12px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.cp-coupon-tag { font-size: 10px; font-weight: 700; color: #8a7660; background: #f0e9df; border-radius: 6px; padding: 4px 8px; white-space: nowrap; }
+.cp-coupon-main { flex: 1; }
+.cp-coupon-main .t { font-size: 14px; font-weight: 600; color: #4a4036; }
+.cp-coupon-main .s { font-size: 11px; color: #9a8c7c; margin-top: 2px; }
+.cp-coupon-use { border: none; background: #5f5346; color: #f5efe6; font-size: 12px; font-weight: 600; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+
 @media (max-width: 820px) {
   .detail-grid { grid-template-columns: 1fr; }
   .form-grid { grid-template-columns: 1fr; }
