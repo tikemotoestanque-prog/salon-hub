@@ -23,8 +23,20 @@ export const SOURCE_META = {
 export const RES_SOURCE_META = {
   line: { label: '公式LINE', short: 'LINE', color: '#06c755', bg: '#e2f7ea', bar: '#06c755' },
   phone: { label: '電話', short: '電話', color: '#c25e00', bg: '#fff1e3', bar: '#e08a1e' },
+  hotpepper: { label: 'ホットペッパー', short: 'HPB', color: '#e8400f', bg: '#fde7e0', bar: '#e8400f' },
   walkin: { label: '来店・店頭', short: '来店', color: '#1f7a8c', bg: '#e3f4f7', bar: '#1f7a8c' },
   other: { label: 'その他', short: '他', color: '#6b6b6b', bg: '#eef0f2', bar: '#9b8e85' },
+}
+
+// 店ごとに編集できる設定の初期値（store経由でlocalStorageに保存）
+export const DEFAULT_MENUS = ['カット', 'カット+カラー', 'カット+カラー+TR', 'カット+パーマ', 'カット+ブリーチ+カラー', '白髪染め', 'カット+白髪染め', 'カット+縮毛矯正', 'トリートメント', 'ヘッドスパ', 'メンズカット', '眉カット']
+// ステータス自動判定のしきい値
+export const DEFAULT_THRESHOLDS = { newMaxVisits: 2, vipVisits: 20, vipSpent: 250000, followupDays: 60, dormantDays: 90 }
+export const DEFAULT_SETTINGS = {
+  staff: [...STAFF],
+  menus: [...DEFAULT_MENUS],
+  statuses: STATUS_META,
+  thresholds: { ...DEFAULT_THRESHOLDS },
 }
 
 // Googleクチコミ依頼の状態（未送信 → 依頼送信済 → 投稿済）
@@ -360,7 +372,8 @@ function genReservations(registered) {
           if (rnd() < 0.65) {
             const c = pick(registered)
             customerId = c.id; customer = c.name; menu = c.lastMenu
-            source = c.integrations.line === '連携済' && rnd() < 0.85 ? 'line' : 'phone'
+            // LINE連携済はLINE予約多め、それ以外は電話/ホットペッパーに分散
+            source = c.integrations.line === '連携済' && rnd() < 0.7 ? 'line' : (rnd() < 0.5 ? 'hotpepper' : 'phone')
           } else {
             const sei = pick(SEI)
             source = rnd() < 0.6 ? 'phone' : 'walkin'

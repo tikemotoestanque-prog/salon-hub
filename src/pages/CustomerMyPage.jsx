@@ -59,7 +59,7 @@ export default function CustomerMyPage() {
     return (
       <div className="empty">
         顧客が見つかりません。<br />
-        <Link className="back-link" to="/">← 顧客一覧へ戻る</Link>
+        <Link className="back-link" to="/customers">← 顧客一覧へ戻る</Link>
       </div>
     )
   }

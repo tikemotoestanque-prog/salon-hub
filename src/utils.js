@@ -23,3 +23,44 @@ export function initials(name) {
 export function yen(n) {
   return '¥' + (n || 0).toLocaleString('ja-JP')
 }
+
+// メニュー名から料金を概算（デモ用。実際の金額が記録されていればそちらを優先）
+export function priceOf(menu) {
+  if (!menu) return 4500
+  let p = 4500 // カット基本
+  if (/カラー|白髪/.test(menu)) p += 4000
+  if (/ブリーチ/.test(menu)) p += 5000
+  if (/パーマ|矯正|デジ/.test(menu)) p += 6000
+  if (/TR|トリートメント/.test(menu)) p += 2000
+  if (/スパ/.test(menu)) p += 2500
+  if (/眉/.test(menu)) p += 500
+  return p
+}
+export function visitPrice(v) {
+  return v && v.price ? Number(v.price) : priceOf(v && v.menu)
+}
+
+// 来店履歴から平均来店周期（日）を算出
+export function avgIntervalDays(history) {
+  if (!history || history.length < 2) return null
+  const ds = history.map((h) => new Date(h.date + 'T00:00:00').getTime()).sort((a, b) => b - a)
+  let sum = 0
+  for (let i = 0; i < ds.length - 1; i++) sum += (ds[i] - ds[i + 1]) / 86400000
+  return Math.round(sum / (ds.length - 1))
+}
+export function computePattern(history) {
+  const a = avgIntervalDays(history)
+  if (a == null) return 'まだ来店1回・パターン未確定'
+  return `平均${a}日周期（直近${Math.min(history.length, 10)}回）`
+}
+
+// 来店回数・累計・最終来店日からステータスを自動判定（設定の閾値を使う）
+export function computeStatus(c, th) {
+  const days = daysSince(c.lastVisit)
+  if (days == null) return 'new'
+  if (days >= th.dormantDays) return 'dormant'
+  if (days >= th.followupDays) return 'followup'
+  if ((c.visitCount || 0) >= th.vipVisits || (c.totalSpent || 0) >= th.vipSpent) return 'vip'
+  if ((c.visitCount || 0) <= th.newMaxVisits) return 'new'
+  return 'regular'
+}

@@ -1,20 +1,28 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useStore } from '../store.jsx'
-import { STATUS_META, SOURCE_META, STAFF } from '../data/sampleData.js'
+import { SOURCE_META } from '../data/sampleData.js'
+import { TODAY_ISO } from '../utils.js'
 
 const empty = {
   name: '', kana: '', gender: '女性', birthday: '', phone: '', email: '',
   status: 'new', source: 'hotpepper', assignedStaff: '',
   hairType: '', hairCondition: '', scalp: '', hairNotes: '',
   allergies: '', reservationPattern: '', line: false, instagram: '',
-  recDate: '2026-06-24', recMenu: '', recNote: '', recRecipe: '',
+  recDate: TODAY_ISO, recMenu: '', recPrice: '', recNote: '', recRecipe: '',
 }
 
 export default function NewCustomer() {
-  const { addCustomer, addTreatment } = useStore()
+  const { addCustomer, addTreatment, settings } = useStore()
   const nav = useNavigate()
-  const [f, setF] = useState(empty)
+  const [params] = useSearchParams()
+  const preset = params.get('source')
+  const fromLine = preset === 'line'
+  const [f, setF] = useState(() => ({
+    ...empty,
+    source: preset && SOURCE_META[preset] ? preset : empty.source,
+    line: fromLine ? true : empty.line,
+  }))
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
 
   const submit = (e) => {
@@ -24,8 +32,9 @@ export default function NewCustomer() {
     if (f.recMenu.trim()) {
       addTreatment(id, {
         date: f.recDate,
-        staff: f.staff || f.assignedStaff,
+        staff: f.assignedStaff,
         menu: f.recMenu,
+        price: f.recPrice,
         note: f.recNote,
         recipe: f.recRecipe,
       })
@@ -41,6 +50,10 @@ export default function NewCustomer() {
           <p>必須項目（<span className="required">*</span>）を入力してください</p>
         </div>
       </div>
+
+      {fromLine && (
+        <div className="lp-flash">📲 デモHPの「LINEで予約」から来た新規予約として登録します（流入元＝公式LINE / LINE連携ONを初期設定）。</div>
+      )}
 
       <form className="card section" onSubmit={submit}>
         <h3>👤 基本情報</h3>
@@ -74,7 +87,7 @@ export default function NewCustomer() {
           <div className="field">
             <label>ステータス</label>
             <select value={f.status} onChange={set('status')}>
-              {Object.entries(STATUS_META).map(([k, m]) => <option key={k} value={k}>{m.icon} {m.label}</option>)}
+              {Object.entries(settings.statuses).map(([k, m]) => <option key={k} value={k}>{m.icon} {m.label}</option>)}
             </select>
           </div>
           <div className="field">
@@ -87,12 +100,12 @@ export default function NewCustomer() {
             <label>担当スタッフ</label>
             <select value={f.assignedStaff} onChange={set('assignedStaff')}>
               <option value="">未定</option>
-              {STAFF.map((s) => <option key={s} value={s}>{s}</option>)}
+              {settings.staff.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div className="field">
             <label>予約パターン</label>
-            <input value={f.reservationPattern} onChange={set('reservationPattern')} placeholder="約4週間ごと 等" />
+            <input value={f.reservationPattern} onChange={set('reservationPattern')} placeholder="施術記録から自動算出されます" />
           </div>
         </div>
 
@@ -125,7 +138,12 @@ export default function NewCustomer() {
           </div>
           <div className="field">
             <label>メニュー</label>
-            <input value={f.recMenu} onChange={set('recMenu')} placeholder="カット + カラー 等（入力すると履歴に登録）" />
+            <input list="menu-suggest" value={f.recMenu} onChange={set('recMenu')} placeholder="カット + カラー 等（入力すると履歴に登録）" />
+            <datalist id="menu-suggest">{settings.menus.map((m) => <option key={m} value={m} />)}</datalist>
+          </div>
+          <div className="field">
+            <label>金額（円・空欄ならメニューから概算）</label>
+            <input type="number" value={f.recPrice} onChange={set('recPrice')} placeholder="例: 8500" />
           </div>
           <div className="field full">
             <label>対応メモ</label>
@@ -138,7 +156,7 @@ export default function NewCustomer() {
         </div>
 
         <div className="form-actions">
-          <button type="button" className="btn ghost" onClick={() => nav('/')}>キャンセル</button>
+          <button type="button" className="btn ghost" onClick={() => nav('/customers')}>キャンセル</button>
           <button type="submit" className="btn">登録する</button>
         </div>
       </form>

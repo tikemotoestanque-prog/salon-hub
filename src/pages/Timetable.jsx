@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
-import { STAFF, RES_SOURCE_META } from '../data/sampleData.js'
+import { RES_SOURCE_META } from '../data/sampleData.js'
 import { TODAY_ISO } from '../utils.js'
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
@@ -38,7 +38,7 @@ const blank = (date, staff, start) => ({
   date,
   customerId: null,
   customer: '',
-  staff: staff || STAFF[0],
+  staff: staff || '',
   start: start || '10:00',
   end: start ? minToStr(Math.min(toMin(start) + 60, END * 60)) : '11:00',
   menu: '',
@@ -46,7 +46,8 @@ const blank = (date, staff, start) => ({
 })
 
 export default function Timetable() {
-  const { reservations, customers, addReservation, updateReservation, deleteReservation } = useStore()
+  const { reservations, customers, settings, addReservation, updateReservation, deleteReservation } = useStore()
+  const STAFF = settings.staff
   const nav = useNavigate()
   const [date, setDate] = useState(TODAY_ISO)
   const [editing, setEditing] = useState(null) // 編集中のフォーム or null
@@ -66,7 +67,7 @@ export default function Timetable() {
   const showNow = isToday && nowMin >= START * 60 && nowMin <= END * 60
 
   const openEdit = (r) => setEditing({ ...r })
-  const openAdd = (staff, start) => setEditing(blank(date, staff, start))
+  const openAdd = (staff, start) => setEditing(blank(date, staff || STAFF[0], start))
 
   // ---- ドラッグで時間をずらす ----
   function onPointerDown(e, r) {
@@ -194,6 +195,8 @@ export default function Timetable() {
         <ResModal
           form={editing}
           customers={customers}
+          staff={STAFF}
+          menus={settings.menus}
           onClose={() => setEditing(null)}
           onSave={(f) => {
             const { id, ...fields } = f
@@ -214,7 +217,7 @@ export default function Timetable() {
   )
 }
 
-function ResModal({ form, customers, onClose, onSave, onDelete, onOpenCard }) {
+function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, onOpenCard }) {
   const [f, setF] = useState(form)
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
 
@@ -259,7 +262,7 @@ function ResModal({ form, customers, onClose, onSave, onDelete, onOpenCard }) {
             <div className="field">
               <label>担当スタッフ</label>
               <select value={f.staff} onChange={(e) => set('staff', e.target.value)}>
-                {STAFF.map((s) => <option key={s} value={s}>{s}</option>)}
+                {staff.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           </div>
@@ -283,7 +286,8 @@ function ResModal({ form, customers, onClose, onSave, onDelete, onOpenCard }) {
           </div>
           <div className="field">
             <label>メニュー</label>
-            <input value={f.menu} onChange={(e) => set('menu', e.target.value)} placeholder="例：カット+カラー" />
+            <input list="res-menu-suggest" value={f.menu} onChange={(e) => set('menu', e.target.value)} placeholder="例：カット+カラー" />
+            <datalist id="res-menu-suggest">{menus.map((m) => <option key={m} value={m} />)}</datalist>
           </div>
           {f.customerId && (
             <button className="link-btn" onClick={() => onOpenCard(f.customerId)}>📋 このお客様のカルテを開く →</button>

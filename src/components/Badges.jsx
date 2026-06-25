@@ -1,7 +1,10 @@
-import { STATUS_META, SOURCE_META } from '../data/sampleData.js'
+import { useStore } from '../store.jsx'
+import { SOURCE_META, STATUS_META } from '../data/sampleData.js'
 
 export function StatusBadge({ status }) {
-  const m = STATUS_META[status] || STATUS_META.new
+  const { settings } = useStore()
+  const statuses = settings?.statuses || STATUS_META
+  const m = statuses[status] || statuses.new || { label: status, color: '#555', bg: '#eee', icon: '' }
   return (
     <span className="badge" style={{ background: m.bg, color: m.color }}>
       <span aria-hidden>{m.icon}</span>

@@ -2,11 +2,10 @@ import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { StatusBadge, SourceBadge } from '../components/Badges.jsx'
-import { STATUS_META } from '../data/sampleData.js'
 import { initials, daysSince, yen } from '../utils.js'
 
 export default function CustomerList() {
-  const { customers } = useStore()
+  const { customers, settings } = useStore()
   const nav = useNavigate()
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
@@ -33,7 +32,7 @@ export default function CustomerList() {
         <input placeholder="名前・カナ・メニューで検索" value={q} onChange={(e) => setQ(e.target.value)} />
         <select value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="all">すべてのステータス</option>
-          {Object.entries(STATUS_META).map(([k, m]) => (
+          {Object.entries(settings.statuses).map(([k, m]) => (
             <option key={k} value={k}>{m.icon} {m.label}</option>
           ))}
         </select>

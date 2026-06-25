@@ -1,15 +1,27 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { sampleCustomers, sampleReservations } from './data/sampleData.js'
+import { sampleCustomers, sampleReservations, DEFAULT_SETTINGS } from './data/sampleData.js'
+import { computeStatus, computePattern, priceOf } from './utils.js'
 
 const StoreContext = createContext(null)
 const LS_KEY = 'salonhub.v1'
 
+const freshSettings = () => JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+const freshState = () => ({ customers: sampleCustomers, reservations: sampleReservations, settings: freshSettings() })
+
 function load() {
   try {
     const raw = localStorage.getItem(LS_KEY)
-    if (raw) return JSON.parse(raw)
+    if (raw) {
+      const p = JSON.parse(raw)
+      return {
+        customers: p.customers || sampleCustomers,
+        reservations: p.reservations || sampleReservations,
+        // 旧データ（settings無し）でも既定値で動くようにマージ
+        settings: { ...freshSettings(), ...(p.settings || {}) },
+      }
+    }
   } catch (e) { /* ignore */ }
-  return { customers: sampleCustomers, reservations: sampleReservations }
+  return freshState()
 }
 
 export function StoreProvider({ children }) {
@@ -60,14 +72,22 @@ export function StoreProvider({ children }) {
       customers: s.customers.map((c) => {
         if (c.id !== customerId) return c
         const recipe = record.recipe ? { note: record.recipe } : null
-        const entry = { date: record.date, staff: record.staff, menu: record.menu, note: record.note || '', recipe }
-        return {
+        const price = record.price ? Number(record.price) : priceOf(record.menu)
+        const entry = { date: record.date, staff: record.staff, menu: record.menu, note: record.note || '', price, recipe }
+        // 日付順（新しい順）に並べ直す
+        const history = [entry, ...c.history].sort((a, b) => (a.date < b.date ? 1 : -1))
+        const updated = {
           ...c,
-          lastVisit: record.date,
-          lastMenu: record.menu,
+          lastVisit: history[0].date,
+          lastMenu: history[0].menu,
           visitCount: (c.visitCount || 0) + 1,
-          history: [entry, ...c.history],
+          totalSpent: (c.totalSpent || 0) + price,
+          history,
         }
+        // 施術後にステータスと予約パターンを自動更新
+        updated.status = computeStatus(updated, s.settings.thresholds)
+        updated.reservationPattern = computePattern(history)
+        return updated
       }),
     }))
   }
@@ -89,10 +109,22 @@ export function StoreProvider({ children }) {
     setState((s) => ({ ...s, reservations: s.reservations.filter((r) => r.id !== id) }))
   }
 
-  const resetData = () => setState({ customers: sampleCustomers, reservations: sampleReservations })
+  const updateSettings = (fields) => setState((s) => ({ ...s, settings: { ...s.settings, ...fields } }))
+
+  // 既存の全顧客のステータス・予約パターンを今の閾値で一括再計算
+  const recomputeAll = () => setState((s) => ({
+    ...s,
+    customers: s.customers.map((c) => ({
+      ...c,
+      status: computeStatus(c, s.settings.thresholds),
+      reservationPattern: computePattern(c.history),
+    })),
+  }))
+
+  const resetData = () => setState(freshState())
 
   return (
-    <StoreContext.Provider value={{ ...state, addCustomer, updateCustomer, addTreatment, addReservation, updateReservation, deleteReservation, resetData }}>
+    <StoreContext.Provider value={{ ...state, addCustomer, updateCustomer, addTreatment, addReservation, updateReservation, deleteReservation, updateSettings, recomputeAll, resetData }}>
       {children}
     </StoreContext.Provider>
   )

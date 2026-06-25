@@ -1,24 +1,25 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link, Navigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
-import { STAFF } from '../data/sampleData.js'
+import { TODAY_ISO } from '../utils.js'
 
 export default function TreatmentRecord() {
   const { id } = useParams()
-  const { customers, addTreatment } = useStore()
+  const { customers, addTreatment, settings } = useStore()
   const nav = useNavigate()
   const customer = customers.find((c) => c.id === id)
 
   const [f, setF] = useState({
-    date: '2026-06-24',
+    date: TODAY_ISO,
     staff: customer?.assignedStaff || '',
     menu: '',
+    price: '',
     note: '',
     recipe: '',
   })
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
 
-  if (!customer) return <Navigate to="/" replace />
+  if (!customer) return <Navigate to="/customers" replace />
 
   const submit = (e) => {
     e.preventDefault()
@@ -47,12 +48,17 @@ export default function TreatmentRecord() {
             <label>担当スタッフ</label>
             <select value={f.staff} onChange={set('staff')}>
               <option value="">未選択</option>
-              {STAFF.map((s) => <option key={s} value={s}>{s}</option>)}
+              {settings.staff.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          <div className="field full">
+          <div className="field">
             <label>メニュー <span className="required">*</span></label>
-            <input value={f.menu} onChange={set('menu')} placeholder="カット + カラー + TR" required />
+            <input list="rec-menu-suggest" value={f.menu} onChange={set('menu')} placeholder="カット + カラー + TR" required />
+            <datalist id="rec-menu-suggest">{settings.menus.map((m) => <option key={m} value={m} />)}</datalist>
+          </div>
+          <div className="field">
+            <label>金額（円・空欄ならメニューから概算）</label>
+            <input type="number" value={f.price} onChange={set('price')} placeholder="例: 12000" />
           </div>
           <div className="field full">
             <label>対応メモ</label>

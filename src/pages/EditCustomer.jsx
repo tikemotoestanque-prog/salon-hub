@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
-import { STATUS_META, SOURCE_META, STAFF, G_REVIEW_META } from '../data/sampleData.js'
+import { SOURCE_META, G_REVIEW_META } from '../data/sampleData.js'
 import { gReview } from '../utils.js'
 
 // 顧客オブジェクト（入れ子）→ フォーム（平たい形）に変換
@@ -24,7 +24,7 @@ function toForm(c) {
 export default function EditCustomer() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { customers, updateCustomer } = useStore()
+  const { customers, updateCustomer, settings } = useStore()
   const c = customers.find((x) => x.id === id)
   const [f, setF] = useState(() => (c ? toForm(c) : null))
 
@@ -32,7 +32,7 @@ export default function EditCustomer() {
     return (
       <div className="empty">
         顧客が見つかりません。<br />
-        <Link className="back-link" to="/">← 顧客一覧へ戻る</Link>
+        <Link className="back-link" to="/customers">← 顧客一覧へ戻る</Link>
       </div>
     )
   }
@@ -100,7 +100,7 @@ export default function EditCustomer() {
           <div className="field">
             <label>ステータス</label>
             <select value={f.status} onChange={set('status')}>
-              {Object.entries(STATUS_META).map(([k, m]) => <option key={k} value={k}>{m.icon} {m.label}</option>)}
+              {Object.entries(settings.statuses).map(([k, m]) => <option key={k} value={k}>{m.icon} {m.label}</option>)}
             </select>
           </div>
           <div className="field">
@@ -113,7 +113,7 @@ export default function EditCustomer() {
             <label>担当スタッフ</label>
             <select value={f.assignedStaff} onChange={set('assignedStaff')}>
               <option value="">未定</option>
-              {STAFF.map((s) => <option key={s} value={s}>{s}</option>)}
+              {settings.staff.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
           <div className="field">
