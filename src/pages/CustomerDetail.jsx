@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { StatusBadge, SourceBadge } from '../components/Badges.jsx'
@@ -27,6 +28,17 @@ export default function CustomerDetail() {
   const gStatus = gReview(c.integrations?.google)
   const gMeta = G_REVIEW_META[gStatus]
   const setG = (status) => updateCustomer(c.id, { integrations: { ...c.integrations, google: status, googleDate: TODAY_ISO } })
+
+  const [lineIdInput, setLineIdInput] = useState('')
+  const [lineIdEditing, setLineIdEditing] = useState(false)
+  const currentLineId = c.integrations?.lineUserId || ''
+  const saveLineId = () => {
+    const val = lineIdInput.trim()
+    if (!val) return
+    updateCustomer(c.id, { integrations: { ...c.integrations, lineUserId: val } })
+    setLineIdEditing(false)
+    setLineIdInput('')
+  }
 
   return (
     <div>
@@ -124,6 +136,17 @@ export default function CustomerDetail() {
           <div className="card section">
             <h3>🔗 外部連携</h3>
             <dl className="kv">
+              <dt>LINE ID</dt>
+              <dd>
+                {currentLineId ? (
+                  <span style={{ fontSize: 11, wordBreak: 'break-all', color: 'var(--muted)' }}>
+                    {currentLineId}
+                    <button className="btn ghost" style={{ marginLeft: 8, padding: '2px 8px', fontSize: 11 }} onClick={() => { setLineIdInput(currentLineId); setLineIdEditing(true) }}>変更</button>
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--muted)', fontSize: 13 }}>未登録</span>
+                )}
+              </dd>
               <dt>公式LINE</dt><dd>{c.integrations?.line}</dd>
               <dt>Instagram</dt><dd>{c.integrations?.instagram}</dd>
               <dt>Googleクチコミ</dt>
@@ -134,6 +157,25 @@ export default function CustomerDetail() {
                 )}
               </dd>
             </dl>
+            {/* LINE ID 登録UI */}
+            {(lineIdEditing || !currentLineId) && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 6 }}>
+                  お客様がLIFFを開いた時に表示されるLINE IDを貼り付けてください
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input
+                    value={lineIdInput}
+                    onChange={(e) => setLineIdInput(e.target.value)}
+                    placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    style={{ flex: 1, padding: '6px 8px', border: '1px solid #ddd', borderRadius: 6, fontSize: 13 }}
+                  />
+                  <button className="btn" style={{ whiteSpace: 'nowrap' }} onClick={saveLineId}>登録</button>
+                  {lineIdEditing && <button className="btn ghost" onClick={() => setLineIdEditing(false)}>キャンセル</button>}
+                </div>
+              </div>
+            )}
+
             <div style={{ marginTop: 12 }}>
               {gStatus === '未送信' && (
                 <button className="btn ghost" style={{ width: '100%' }} onClick={() => setG('依頼送信済')}>
