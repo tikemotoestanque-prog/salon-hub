@@ -76,7 +76,9 @@ export function StoreProvider({ children }) {
           supabase.from('settings').select('data').eq('id', 1).maybeSingle(),
         ])
         // 初回（テーブルが空）ならサンプルデータを投入
-        if (!cust || cust.length === 0) {
+        // ※ RLSでブロックされた場合はseeding不要なので認証済み確認
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session && (!cust || cust.length === 0)) {
           await supabase.from('customers').upsert(sampleCustomers.map(toCustomerRow))
           await supabase.from('reservations').upsert(sampleReservations.map(toResRow))
           await supabase.from('settings').upsert({ id: 1, data: freshSettings() })
