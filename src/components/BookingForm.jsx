@@ -69,7 +69,7 @@ export default function BookingForm({ customer }) {
               🔔 自動配信を予約しました{'\n'}
               ・前日 17:00 … ご来店リマインド{'\n'}
               ・来店翌日 … ご来店のお礼＆次回ご提案{'\n'}
-              <span className="bk-sched-tag">SalonHubが自動でお送りします</span>
+              <span className="bk-sched-tag">サロピが自動でお送りします</span>
             </div>
             </>
           ) : (
