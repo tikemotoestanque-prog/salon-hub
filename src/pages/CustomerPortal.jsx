@@ -7,7 +7,7 @@ import { daysSince, TODAY, TODAY_ISO } from '../utils.js'
 export default function CustomerPortal() {
   const { id } = useParams()
   const [params] = useSearchParams()
-  const { customers, reservations, settings, cancelReservation } = useStore()
+  const { customers, reservations, settings } = useStore()
   const c = customers.find((x) => x.id === id)
   const [tab, setTab] = useState(['karte', 'book', 'card'].includes(params.get('tab')) ? params.get('tab') : 'karte')
 
@@ -27,7 +27,7 @@ export default function CustomerPortal() {
 
         <div className="cp-body">
           {tab === 'karte' && <Karte c={c} rank={rank} />}
-          {tab === 'book' && <BookTab c={c} reservations={reservations} cancelReservation={cancelReservation} />}
+          {tab === 'book' && <BookTab c={c} reservations={reservations} />}
           {tab === 'card' && <Card c={c} rank={rank} />}
         </div>
 
@@ -76,7 +76,7 @@ function Karte({ c, rank }) {
   )
 }
 
-function BookTab({ c, reservations, cancelReservation }) {
+function BookTab({ c, reservations }) {
   const upcoming = reservations
     .filter((r) => r.customerId === c.id && r.date >= TODAY_ISO && !r.cancelled)
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -89,13 +89,7 @@ function BookTab({ c, reservations, cancelReservation }) {
           {upcoming.map((r) => (
             <div key={r.id} style={{ background: '#f9f9f9', borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '0.75rem', border: '1px solid #eee' }}>
               <div style={{ fontWeight: 700, marginBottom: 4 }}>{r.date}（{r.start}〜{r.end}）</div>
-              <div style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>{r.menu} ／ 担当：{r.staff}</div>
-              <button
-                onClick={() => { if (window.confirm('この予約をキャンセルしますか？')) cancelReservation(r.id) }}
-                style={{ fontSize: 12, color: '#d32f2f', background: 'none', border: '1px solid #d32f2f', borderRadius: 4, padding: '4px 12px', cursor: 'pointer' }}
-              >
-                キャンセルする
-              </button>
+              <div style={{ fontSize: 13, color: '#555' }}>{r.menu} ／ 担当：{r.staff}</div>
             </div>
           ))}
           <div style={{ height: '1rem' }} />
