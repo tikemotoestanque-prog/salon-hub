@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react'
 import { useStore } from '../store.jsx'
 import { slotFree, pickFreeStaff, TODAY_ISO, shopClosedReason, isStaffOff, workingStaff } from '../utils.js'
 
-const TIMES = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30']
+const ALL_TIMES = ['09:00','09:30','10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00']
+const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const minPlus = (t, m) => { const [h, mm] = t.split(':').map(Number); const x = h * 60 + mm + m; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}` }
 const fmtDate = (iso) => { const d = new Date(iso + 'T00:00:00'); const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]; return `${d.getMonth() + 1}/${d.getDate()}（${w}）` }
@@ -21,6 +22,12 @@ export default function BookingForm({ customer }) {
   const [result, setResult] = useState(null) // {ok, date, time, staff, menu}
 
   const dur = (settings.menuDurations?.[menu]) || 60
+  const designationFee = staff ? (settings.designationFees?.[staff] || 0) : 0
+
+  // 営業時間内のスロットだけに絞る
+  const openMin = toMin(settings.openTime || '10:00')
+  const closeMin = toMin(settings.closeTime || '19:00')
+  const TIMES = ALL_TIMES.filter((t) => { const m = toMin(t); return m >= openMin && m + dur <= closeMin })
 
   // 休日（店休 or 指名スタッフの休み）
   const closedReason = shopClosedReason(settings, date)
@@ -31,11 +38,11 @@ export default function BookingForm({ customer }) {
     if (closedReason || staffOffToday) return TIMES.map((t) => ({ time: t, ok: false }))
     const candidates = staff ? [staff] : workingStaff(settings, staffList, date)
     return TIMES.map((t) => ({ time: t, ok: candidates.some((s) => slotFree(reservations, date, s, t, dur, capacity)) }))
-  }, [reservations, date, staff, capacity, staffList, settings, closedReason, staffOffToday, dur])
+  }, [reservations, date, staff, capacity, staffList, settings, closedReason, staffOffToday, dur, TIMES])
 
   const anyOpen = slots.some((s) => s.ok)
 
-  const submit = () => {
+  const submit = async () => {
     if (!name.trim() || !time) return
     const assigned = staff || pickFreeStaff(reservations, date, time, dur, capacity, workingStaff(settings, staffList, date))
     if (!assigned || !slotFree(reservations, date, assigned, time, dur, capacity)) {
@@ -47,6 +54,17 @@ export default function BookingForm({ customer }) {
       staff: assigned, start: time, end: minPlus(time, dur), menu, source: 'line',
     })
     setResult({ ok: true, date, time, staff: assigned, menu })
+
+    // LINE自動送信（お客様のlineUserId があれば本物のLINEに送る）
+    const lineUserId = customer?.integrations?.lineUserId
+    if (lineUserId) {
+      const text = `${name.trim()}様、ご予約ありがとうございます！✂️\n\n📅 ${fmtDate(date)} ${time}〜\n💇 ${menu}\n👤 担当：${assigned}\n\nご来店をお待ちしております🌿`
+      fetch('/api/send-line', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: lineUserId, messages: [{ type: 'text', text }] }),
+      }).catch(() => {}) // エラーは握りつぶす（デモでも動くように）
+    }
   }
 
   if (result) {
@@ -104,9 +122,12 @@ export default function BookingForm({ customer }) {
       <label className="cp-field"><span>ご指名</span>
         <select value={staff} onChange={(e) => { setStaff(e.target.value); setTime(null) }}>
           <option value="">おまかせ</option>
-          {staffList.map((s) => <option key={s} value={s}>{s}</option>)}
+          {staffList.map((s) => <option key={s} value={s}>{s}{(settings.designationFees?.[s] || 0) > 0 ? ` (+¥${(settings.designationFees[s]).toLocaleString()})` : ''}</option>)}
         </select>
       </label>
+      {designationFee > 0 && (
+        <div style={{ fontSize: 12, color: '#c25e00', marginTop: -8, marginBottom: 8 }}>指名料 +¥{designationFee.toLocaleString()} が加算されます</div>
+      )}
 
       <div className="cp-field"><span>空いているお時間（{fmtDate(date)}）</span></div>
       {closedReason ? (

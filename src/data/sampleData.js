@@ -52,6 +52,9 @@ export const DEFAULT_SETTINGS = {
   closedWeekdays: [2], // 定休日（0=日 … 6=土）。既定は火曜
   closedDates: [],     // 臨時休業日（ISO日付の配列）
   staffOff: {},        // スタッフ個別の休み { 'スタッフ名': ['2026-06-25', ...] }
+  designationFees: {}, // 指名料 { 'スタッフ名': 金額 }
+  openTime: '10:00',   // 営業開始時間
+  closeTime: '19:00',  // 営業終了時間
 }
 
 // Googleクチコミ依頼の状態（未送信 → 依頼送信済 → 投稿済）

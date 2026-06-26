@@ -8,6 +8,9 @@ export default function Settings() {
   const [capacity, setCapacity] = useState(settings.capacity || {})
   const [menus, setMenus] = useState(settings.menus)
   const [menuDurations, setMenuDurations] = useState(settings.menuDurations || {})
+  const [designationFees, setDesignationFees] = useState(settings.designationFees || {})
+  const [openTime, setOpenTime] = useState(settings.openTime || '10:00')
+  const [closeTime, setCloseTime] = useState(settings.closeTime || '19:00')
   const [th, setTh] = useState(settings.thresholds)
   const [closedWeekdays, setClosedWeekdays] = useState(settings.closedWeekdays || [])
   const [closedDates, setClosedDates] = useState(settings.closedDates || [])
@@ -66,6 +69,9 @@ export default function Settings() {
       capacity: cap,
       menus: menus.map((s) => s.trim()).filter(Boolean),
       menuDurations,
+      designationFees,
+      openTime,
+      closeTime,
       thresholds: {
         newMaxVisits: Number(th.newMaxVisits), vipVisits: Number(th.vipVisits), vipSpent: Number(th.vipSpent),
         followupDays: Number(th.followupDays), dormantDays: Number(th.dormantDays),
@@ -109,19 +115,39 @@ export default function Settings() {
       {/* スタッフ */}
       <div className="card section">
         <h3>👥 スタッフ</h3>
-        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>「同時対応」は、そのスタイリストが同じ時間に何名まで担当できるか（予約の空き判定に使われます）。</p>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>「同時対応」は同じ時間に何名まで担当できるか。「指名料」は指名時に加算される金額（0なら無料）。</p>
         {staff.map((s, i) => (
-          <div className="row-edit" key={i}>
-            <input value={s} onChange={(e) => setStaffAt(i, e.target.value)} placeholder="スタッフ名" />
+          <div className="row-edit" key={i} style={{ gap: 6 }}>
+            <input value={s} onChange={(e) => setStaffAt(i, e.target.value)} placeholder="スタッフ名" style={{ flex: 2 }} />
             <label className="cap-edit">同時
               <select value={capacity[s] || 1} onChange={(e) => setCapacity({ ...capacity, [s]: Number(e.target.value) })}>
                 <option value={1}>1名</option><option value={2}>2名</option><option value={3}>3名</option>
               </select>
             </label>
+            <label className="cap-edit">指名料
+              <input type="number" min="0" step="100" value={designationFees[s] || 0} onChange={(e) => setDesignationFees({ ...designationFees, [s]: Number(e.target.value) })} style={{ width: 72 }} />円
+            </label>
             <button className="btn ghost danger sm" onClick={() => delStaff(i)}>削除</button>
           </div>
         ))}
         <button className="btn ghost sm" onClick={addStaff}>＋ スタッフを追加</button>
+      </div>
+
+      {/* 営業時間 */}
+      <div className="card section">
+        <h3>🕐 営業時間</h3>
+        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--muted)' }}>予約フォームで選択できる時間帯をこの範囲に絞ります。</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+            開始
+            <input type="time" value={openTime} onChange={(e) => setOpenTime(e.target.value)} style={{ padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6 }} />
+          </label>
+          <span style={{ color: 'var(--muted)' }}>〜</span>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14 }}>
+            終了
+            <input type="time" value={closeTime} onChange={(e) => setCloseTime(e.target.value)} style={{ padding: '4px 8px', border: '1px solid #ddd', borderRadius: 6 }} />
+          </label>
+        </div>
       </div>
 
       {/* 休日 */}
