@@ -70,36 +70,24 @@ export default function BookingForm({ customer }) {
 
   if (result) {
     return (
-      <div className="bk-result">
-        <div className={'bk-line ' + (result.ok ? 'ok' : 'ng')}>
-          <div className="bk-line-head"><span className="av">✂️</span>{salonName}</div>
-          {result.ok ? (
-            <>
-            <div className="bk-bubble">
-              {name.trim()}様、ご予約ありがとうございます！🌿{'\n'}
-              下記の内容で承りました。{'\n\n'}
-              📅 {fmtDate(result.date)} {result.time}〜{'\n'}
-              ✂️ {result.menu}{'\n'}
-              💁 担当：{result.staff}{'\n\n'}
-              ご来店を心よりお待ちしております✨
+      <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+        {result.ok ? (
+          <>
+            <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>✅</div>
+            <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.5rem' }}>ご予約が完了しました</div>
+            <div style={{ fontSize: '0.875rem', color: '#555', lineHeight: 1.7 }}>
+              {fmtDate(result.date)} {result.time}〜<br />
+              {result.menu} ／ 担当：{result.staff}
             </div>
-            <div className="bk-bubble sched">
-              🔔 自動配信を予約しました{'\n'}
-              ・前日 17:00 … ご来店リマインド{'\n'}
-              ・来店翌日 … ご来店のお礼＆次回ご提案{'\n'}
-              <span className="bk-sched-tag">サロピが自動でお送りします</span>
-            </div>
-            </>
-          ) : (
-            <div className="bk-bubble">
-              {name.trim()}様、申し訳ございません🙏{'\n'}
-              ご希望の {fmtDate(result.date)} {result.time} は、ただいま満席となってしまいました。{'\n\n'}
-              恐れ入りますが、別のお時間でのご予約をお願いいたします。{'\n'}
-              下のボタンからもう一度お選びいただけます。
-            </div>
-          )}
-        </div>
-        <button className="cp-btn ghost" onClick={() => { setResult(null); setTime(null) }}>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>😔</div>
+            <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.5rem' }}>ご希望の時間は満席です</div>
+            <div style={{ fontSize: '0.875rem', color: '#555' }}>別のお時間をお選びください</div>
+          </>
+        )}
+        <button className="cp-btn ghost" style={{ marginTop: '1.5rem' }} onClick={() => { setResult(null); setTime(null) }}>
           {result.ok ? '続けて予約する' : '時間を選び直す'}
         </button>
       </div>
