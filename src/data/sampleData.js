@@ -32,11 +32,20 @@ export const RES_SOURCE_META = {
 export const DEFAULT_MENUS = ['カット', 'カット+カラー', 'カット+カラー+TR', 'カット+パーマ', 'カット+ブリーチ+カラー', '白髪染め', 'カット+白髪染め', 'カット+縮毛矯正', 'トリートメント', 'ヘッドスパ', 'メンズカット', '眉カット']
 // ステータス自動判定のしきい値
 export const DEFAULT_THRESHOLDS = { newMaxVisits: 2, vipVisits: 20, vipSpent: 250000, followupDays: 60, dormantDays: 90 }
+// メニューごとのデフォルト所要時間（分）。未設定のメニューは60分扱い
+export const DEFAULT_MENU_DURATIONS = {
+  'カット': 60, 'カット+カラー': 120, 'カット+カラー+TR': 150,
+  'カット+パーマ': 120, 'カット+ブリーチ+カラー': 180, '白髪染め': 90,
+  'カット+白髪染め': 120, 'カット+縮毛矯正': 180, 'トリートメント': 60,
+  'ヘッドスパ': 60, 'メンズカット': 45, '眉カット': 30,
+}
+
 export const DEFAULT_SETTINGS = {
   staff: [...STAFF],
   // スタイリストごとの同時対応人数（2なら同じ時間に2件まで予約可）
   capacity: STAFF.reduce((a, s) => { a[s] = s === '佐藤' ? 2 : 1; return a }, {}),
   menus: [...DEFAULT_MENUS],
+  menuDurations: { ...DEFAULT_MENU_DURATIONS },
   statuses: STATUS_META,
   thresholds: { ...DEFAULT_THRESHOLDS },
   // 休日設定

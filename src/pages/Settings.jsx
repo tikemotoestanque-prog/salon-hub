@@ -7,6 +7,7 @@ export default function Settings() {
   const [staff, setStaff] = useState(settings.staff)
   const [capacity, setCapacity] = useState(settings.capacity || {})
   const [menus, setMenus] = useState(settings.menus)
+  const [menuDurations, setMenuDurations] = useState(settings.menuDurations || {})
   const [th, setTh] = useState(settings.thresholds)
   const [closedWeekdays, setClosedWeekdays] = useState(settings.closedWeekdays || [])
   const [closedDates, setClosedDates] = useState(settings.closedDates || [])
@@ -29,6 +30,7 @@ export default function Settings() {
   const setMenuAt = (i, v) => setMenus(menus.map((s, idx) => (idx === i ? v : s)))
   const addMenu = () => setMenus([...menus, ''])
   const delMenu = (i) => setMenus(menus.filter((_, idx) => idx !== i))
+  const setMenuDur = (m, v) => setMenuDurations({ ...menuDurations, [m]: Number(v) || 60 })
 
   // --- holidays ---
   const WD = ['日', '月', '火', '水', '木', '金', '土']
@@ -63,6 +65,7 @@ export default function Settings() {
       staff: cleanStaff,
       capacity: cap,
       menus: menus.map((s) => s.trim()).filter(Boolean),
+      menuDurations,
       thresholds: {
         newMaxVisits: Number(th.newMaxVisits), vipVisits: Number(th.vipVisits), vipSpent: Number(th.vipSpent),
         followupDays: Number(th.followupDays), dormantDays: Number(th.dormantDays),
@@ -172,11 +175,19 @@ export default function Settings() {
       {/* メニュー */}
       <div className="card section">
         <h3>🧾 メニュー候補</h3>
-        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>施術記録・予約入力のメニュー欄で候補として出ます。</p>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>施術記録・予約入力のメニュー欄で候補として出ます。所要時間は予約の空き枠計算に使います。</p>
         <div className="menu-grid">
           {menus.map((s, i) => (
-            <div className="row-edit" key={i}>
-              <input value={s} onChange={(e) => setMenuAt(i, e.target.value)} placeholder="メニュー名" />
+            <div className="row-edit" key={i} style={{ gap: 6 }}>
+              <input value={s} onChange={(e) => setMenuAt(i, e.target.value)} placeholder="メニュー名" style={{ flex: 2 }} />
+              <input
+                type="number" min="15" max="360" step="15"
+                value={menuDurations[s] || 60}
+                onChange={(e) => setMenuDur(s, e.target.value)}
+                style={{ width: 64, textAlign: 'center' }}
+                title="所要時間（分）"
+              />
+              <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>分</span>
               <button className="btn ghost danger sm" onClick={() => delMenu(i)}>×</button>
             </div>
           ))}

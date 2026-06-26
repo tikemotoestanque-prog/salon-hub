@@ -191,6 +191,11 @@ export function StoreProvider({ children }) {
     dbDeleteReservation(id)
   }
 
+  const cancelReservation = (id) => {
+    setState((s) => ({ ...s, reservations: s.reservations.map((r) => r.id === id ? { ...r, cancelled: true } : r) }))
+    if (hasSupabase) supabase.from('reservations').update({ cancelled: true }).eq('id', id)
+  }
+
   const updateSettings = (fields) => {
     const next = { ...stateRef.current.settings, ...fields }
     setState((s) => ({ ...s, settings: { ...s.settings, ...fields } }))
@@ -224,7 +229,7 @@ export function StoreProvider({ children }) {
   }
 
   return (
-    <StoreContext.Provider value={{ ...state, loading, addCustomer, updateCustomer, addTreatment, addReservation, updateReservation, deleteReservation, updateSettings, recomputeAll, resetData }}>
+    <StoreContext.Provider value={{ ...state, loading, addCustomer, updateCustomer, addTreatment, addReservation, updateReservation, deleteReservation, cancelReservation, updateSettings, recomputeAll, resetData }}>
       {children}
     </StoreContext.Provider>
   )

@@ -46,7 +46,7 @@ const blank = (date, staff, start) => ({
 })
 
 export default function Timetable() {
-  const { reservations, customers, settings, addReservation, updateReservation, deleteReservation } = useStore()
+  const { reservations, customers, settings, addReservation, updateReservation, deleteReservation, cancelReservation } = useStore()
   const STAFF = settings.staff
   const nav = useNavigate()
   const [date, setDate] = useState(TODAY_ISO)
@@ -177,17 +177,17 @@ export default function Timetable() {
                   return (
                     <div
                       key={r.id}
-                      className={'tt-appt' + (dragging ? ' dragging' : '')}
-                      style={{ top: toY(sMin) + 2, height: toY(eMin) - toY(sMin) - 4, background: meta.bg, borderLeftColor: meta.bar }}
+                      className={'tt-appt' + (dragging ? ' dragging' : '') + (r.cancelled ? ' tt-appt-cancelled' : '')}
+                      style={{ top: toY(sMin) + 2, height: toY(eMin) - toY(sMin) - 4, background: r.cancelled ? '#f5f5f5' : meta.bg, borderLeftColor: r.cancelled ? '#ccc' : meta.bar }}
                       onPointerDown={(e) => onPointerDown(e, r)}
                       onPointerMove={onPointerMove}
                       onPointerUp={(e) => onPointerUp(e, r)}
                       onPointerCancel={onPointerCancel}
                     >
-                      <b>{minToStr(sMin)}–{minToStr(eMin)}</b>
-                      <div className="nm">{r.customer || '（名前未入力）'}</div>
-                      <div className="m">{r.menu}</div>
-                      <span className="tt-src" style={{ color: meta.color }}>{meta.short}</span>
+                      <b style={{ color: r.cancelled ? '#aaa' : undefined }}>{minToStr(sMin)}–{minToStr(eMin)}</b>
+                      <div className="nm" style={{ color: r.cancelled ? '#aaa' : undefined, textDecoration: r.cancelled ? 'line-through' : undefined }}>{r.customer || '（名前未入力）'}</div>
+                      {r.cancelled ? <span style={{ fontSize: 10, color: '#d32f2f' }}>キャンセル</span> : <div className="m">{r.menu}</div>}
+                      {!r.cancelled && <span className="tt-src" style={{ color: meta.color }}>{meta.short}</span>}
                     </div>
                   )
                 })}
@@ -223,6 +223,12 @@ export default function Timetable() {
               setEditing(null)
             }
           }}
+          onCancel={(id) => {
+            if (window.confirm('この予約をキャンセルにしますか？')) {
+              cancelReservation(id)
+              setEditing(null)
+            }
+          }}
           onOpenCard={(cid) => nav('/customer/' + cid)}
           onRegisterNew={(name) => nav('/new?name=' + encodeURIComponent(name))}
         />
@@ -231,7 +237,7 @@ export default function Timetable() {
   )
 }
 
-function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, onOpenCard, onRegisterNew }) {
+function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, onCancel, onOpenCard, onRegisterNew }) {
   const [f, setF] = useState(form)
   const [open, setOpen] = useState(false) // 候補リスト表示中
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
@@ -349,8 +355,10 @@ function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, on
         </div>
         <div className="modal-foot">
           {f.id && <button className="btn ghost danger" onClick={() => onDelete(f.id)}>削除</button>}
+          {f.id && !f.cancelled && <button className="btn ghost" style={{ color: '#c25e00', borderColor: '#c25e00' }} onClick={() => onCancel(f.id)}>予約キャンセル</button>}
+          {f.cancelled && <span style={{ fontSize: 12, color: '#d32f2f', fontWeight: 600 }}>キャンセル済</span>}
           <span style={{ flex: 1 }} />
-          <button className="btn ghost" onClick={onClose}>キャンセル</button>
+          <button className="btn ghost" onClick={onClose}>閉じる</button>
           <button className="btn" onClick={save}>保存</button>
         </div>
       </div>

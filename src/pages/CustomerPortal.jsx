@@ -2,12 +2,12 @@ import { useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import BookingForm from '../components/BookingForm.jsx'
-import { daysSince, TODAY } from '../utils.js'
+import { daysSince, TODAY, TODAY_ISO } from '../utils.js'
 
 export default function CustomerPortal() {
   const { id } = useParams()
   const [params] = useSearchParams()
-  const { customers, settings } = useStore()
+  const { customers, reservations, settings, cancelReservation } = useStore()
   const c = customers.find((x) => x.id === id)
   const [tab, setTab] = useState(['karte', 'book', 'card'].includes(params.get('tab')) ? params.get('tab') : 'karte')
 
@@ -27,7 +27,7 @@ export default function CustomerPortal() {
 
         <div className="cp-body">
           {tab === 'karte' && <Karte c={c} rank={rank} />}
-          {tab === 'book' && <div className="cp-sec"><div className="cp-h">ご予約</div><BookingForm customer={c} /></div>}
+          {tab === 'book' && <BookTab c={c} reservations={reservations} cancelReservation={cancelReservation} />}
           {tab === 'card' && <Card c={c} rank={rank} />}
         </div>
 
@@ -72,6 +72,37 @@ function Karte({ c, rank }) {
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+function BookTab({ c, reservations, cancelReservation }) {
+  const upcoming = reservations
+    .filter((r) => r.customerId === c.id && r.date >= TODAY_ISO && !r.cancelled)
+    .sort((a, b) => a.date.localeCompare(b.date))
+
+  return (
+    <div className="cp-sec">
+      {upcoming.length > 0 && (
+        <>
+          <div className="cp-h">予約済みのご来店</div>
+          {upcoming.map((r) => (
+            <div key={r.id} style={{ background: '#f9f9f9', borderRadius: 8, padding: '0.75rem 1rem', marginBottom: '0.75rem', border: '1px solid #eee' }}>
+              <div style={{ fontWeight: 700, marginBottom: 4 }}>{r.date}（{r.start}〜{r.end}）</div>
+              <div style={{ fontSize: 13, color: '#555', marginBottom: 8 }}>{r.menu} ／ 担当：{r.staff}</div>
+              <button
+                onClick={() => { if (window.confirm('この予約をキャンセルしますか？')) cancelReservation(r.id) }}
+                style={{ fontSize: 12, color: '#d32f2f', background: 'none', border: '1px solid #d32f2f', borderRadius: 4, padding: '4px 12px', cursor: 'pointer' }}
+              >
+                キャンセルする
+              </button>
+            </div>
+          ))}
+          <div style={{ height: '1rem' }} />
+        </>
+      )}
+      <div className="cp-h">新しいご予約</div>
+      <BookingForm customer={c} />
     </div>
   )
 }

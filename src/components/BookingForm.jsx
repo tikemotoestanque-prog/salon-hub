@@ -3,7 +3,6 @@ import { useStore } from '../store.jsx'
 import { slotFree, pickFreeStaff, TODAY_ISO, shopClosedReason, isStaffOff, workingStaff } from '../utils.js'
 
 const TIMES = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30']
-const DUR = 60
 const addDays = (iso, n) => { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 const minPlus = (t, m) => { const [h, mm] = t.split(':').map(Number); const x = h * 60 + mm + m; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}` }
 const fmtDate = (iso) => { const d = new Date(iso + 'T00:00:00'); const w = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]; return `${d.getMonth() + 1}/${d.getDate()}（${w}）` }
@@ -21,6 +20,8 @@ export default function BookingForm({ customer }) {
   const [time, setTime] = useState(null)
   const [result, setResult] = useState(null) // {ok, date, time, staff, menu}
 
+  const dur = (settings.menuDurations?.[menu]) || 60
+
   // 休日（店休 or 指名スタッフの休み）
   const closedReason = shopClosedReason(settings, date)
   const staffOffToday = staff && isStaffOff(settings, staff, date)
@@ -28,24 +29,22 @@ export default function BookingForm({ customer }) {
   // 選択中の日付・スタッフでの空き時間
   const slots = useMemo(() => {
     if (closedReason || staffOffToday) return TIMES.map((t) => ({ time: t, ok: false }))
-    // おまかせ時は出勤しているスタッフだけで空きを見る
     const candidates = staff ? [staff] : workingStaff(settings, staffList, date)
-    return TIMES.map((t) => ({ time: t, ok: candidates.some((s) => slotFree(reservations, date, s, t, DUR, capacity)) }))
-  }, [reservations, date, staff, capacity, staffList, settings, closedReason, staffOffToday])
+    return TIMES.map((t) => ({ time: t, ok: candidates.some((s) => slotFree(reservations, date, s, t, dur, capacity)) }))
+  }, [reservations, date, staff, capacity, staffList, settings, closedReason, staffOffToday, dur])
 
   const anyOpen = slots.some((s) => s.ok)
 
   const submit = () => {
     if (!name.trim() || !time) return
-    const assigned = staff || pickFreeStaff(reservations, date, time, DUR, capacity, workingStaff(settings, staffList, date))
-    // 念のため確定直前にも空き確認（満席なら「無理」メッセージ）
-    if (!assigned || !slotFree(reservations, date, assigned, time, DUR, capacity)) {
+    const assigned = staff || pickFreeStaff(reservations, date, time, dur, capacity, workingStaff(settings, staffList, date))
+    if (!assigned || !slotFree(reservations, date, assigned, time, dur, capacity)) {
       setResult({ ok: false, date, time, menu })
       return
     }
     addReservation({
       date, customerId: customer?.id || null, customer: name.trim(),
-      staff: assigned, start: time, end: minPlus(time, DUR), menu, source: 'line',
+      staff: assigned, start: time, end: minPlus(time, dur), menu, source: 'line',
     })
     setResult({ ok: true, date, time, staff: assigned, menu })
   }
@@ -96,8 +95,8 @@ export default function BookingForm({ customer }) {
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="山田 花子" />
         </label>
       )}
-      <label className="cp-field"><span>メニュー</span>
-        <select value={menu} onChange={(e) => setMenu(e.target.value)}>{settings.menus.map((m) => <option key={m} value={m}>{m}</option>)}</select>
+      <label className="cp-field"><span>メニュー <small style={{ color: 'var(--muted)', fontWeight: 400 }}>（約{dur}分）</small></span>
+        <select value={menu} onChange={(e) => { setMenu(e.target.value); setTime(null) }}>{settings.menus.map((m) => <option key={m} value={m}>{m}</option>)}</select>
       </label>
       <label className="cp-field"><span>ご希望日</span>
         <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setTime(null) }} />
