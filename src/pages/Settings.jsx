@@ -4,6 +4,7 @@ import { useStore } from '../store.jsx'
 export default function Settings() {
   const { settings, updateSettings, recomputeAll } = useStore()
 
+  const [salonName, setSalonName] = useState(settings.salonName || 'Hair Salon GRACE')
   const [staff, setStaff] = useState(settings.staff)
   const [capacity, setCapacity] = useState(settings.capacity || {})
   const [menus, setMenus] = useState(settings.menus)
@@ -65,6 +66,7 @@ export default function Settings() {
     const cleanOff = {}
     cleanStaff.forEach((s) => { if (staffOff[s]?.length) cleanOff[s] = staffOff[s] })
     updateSettings({
+      salonName,
       staff: cleanStaff,
       capacity: cap,
       menus: menus.map((s) => s.trim()).filter(Boolean),
@@ -95,6 +97,15 @@ export default function Settings() {
           <p>お店ごとにスタッフ・メニュー・ステータス・自動判定のルールを調整できます</p>
         </div>
         {saved && <span className="save-flash">{saved}</span>}
+      </div>
+
+      {/* サロン名 */}
+      <div className="card section">
+        <h3>🏠 サロン名</h3>
+        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--muted)' }}>顧客向けのWeb予約・マイページ画面に表示されるサロン名です。</p>
+        <div className="field" style={{ maxWidth: 360 }}>
+          <input value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder="Hair Salon GRACE" />
+        </div>
       </div>
 
       {/* しきい値 */}

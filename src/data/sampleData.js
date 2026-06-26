@@ -55,6 +55,7 @@ export const DEFAULT_SETTINGS = {
   designationFees: {}, // 指名料 { 'スタッフ名': 金額 }
   openTime: '10:00',   // 営業開始時間
   closeTime: '19:00',  // 営業終了時間
+  salonName: 'Hair Salon GRACE', // サロン名（顧客向け画面に表示）
 }
 
 // Googleクチコミ依頼の状態（未送信 → 依頼送信済 → 投稿済）

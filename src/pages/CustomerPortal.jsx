@@ -21,7 +21,7 @@ export default function CustomerPortal() {
     <div className="cp">
       <div className="cp-frame">
         <div className="cp-bar">
-          <span className="cp-salon">Hair Salon GRACE</span>
+          <span className="cp-salon">{settings.salonName || 'Hair Salon GRACE'}</span>
           <span className="cp-user">{c.name} 様</span>
         </div>
 
