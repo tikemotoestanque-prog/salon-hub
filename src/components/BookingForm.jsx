@@ -99,7 +99,6 @@ export default function BookingForm({ customer }) {
             </div>
           )}
         </div>
-        <div className="bk-line-note">📲 実際はこの内容が公式LINEに自動で届きます（デモ表示）</div>
         <button className="cp-btn ghost" onClick={() => { setResult(null); setTime(null) }}>
           {result.ok ? '続けて予約する' : '時間を選び直す'}
         </button>
