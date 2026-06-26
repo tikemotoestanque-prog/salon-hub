@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, hasSupabase } from '../supabaseClient.js'
+import { useStore } from '../store.jsx'
 
 const LIFF_ID = import.meta.env.VITE_LIFF_ID
 
 export default function LiffPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { updateCustomer } = useStore()
   const tabParam = searchParams.get('tab') // book / card / karte
   const [phase, setPhase] = useState('loading') // loading | verify | error | done
   const [lineUserId, setLineUserId] = useState('')
@@ -77,9 +79,11 @@ export default function LiffPage() {
 
     // LINE IDを紐付け保存
     const { data: current } = await supabase.from('customers').select('integrations').eq('id', matched.id).single()
-    await supabase.from('customers').update({
-      integrations: { ...(current?.integrations || {}), lineUserId }
-    }).eq('id', matched.id)
+    const newIntegrations = { ...(current?.integrations || {}), lineUserId }
+    await supabase.from('customers').update({ integrations: newIntegrations }).eq('id', matched.id)
+
+    // storeも即時反映（予約画面でlineUserIdが使えるように）
+    updateCustomer(matched.id, { integrations: newIntegrations })
 
     const dest = `/u/${matched.id}${tabParam ? `?tab=${tabParam}` : ''}`
     navigate(dest, { replace: true })
