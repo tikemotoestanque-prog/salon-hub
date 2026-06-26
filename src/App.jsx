@@ -1,5 +1,7 @@
 import { Routes, Route, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { useStore } from './store.jsx'
+import { useAuth } from './AuthContext.jsx'
+import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import CustomerList from './pages/CustomerList.jsx'
 import CustomerDetail from './pages/CustomerDetail.jsx'
@@ -21,8 +23,20 @@ const CUSTOMER_PREFIXES = ['/lp', '/u/', '/book', '/access', '/menu']
 
 export default function App() {
   const { resetData } = useStore()
+  const { session, signOut } = useAuth()
   const { pathname } = useLocation()
   const isCustomer = CUSTOMER_PREFIXES.some((p) => pathname === p || pathname.startsWith(p))
+
+  // 初期化中（session=undefined）はローディング表示
+  if (session === undefined) {
+    return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', color: '#888' }}>読み込み中…</div>
+  }
+
+  // お客様向けページは認証不要
+  // 管理画面はログイン必須（Supabase未設定時はスルー）
+  if (!isCustomer && session === null) {
+    return <Login />
+  }
 
   const routes = (
     <Routes>
@@ -66,6 +80,11 @@ export default function App() {
         <button className="reset-btn" onClick={() => { if (confirm('サンプルデータに戻しますか？')) resetData() }}>
           データ初期化
         </button>
+        {session && (
+          <button className="reset-btn" onClick={() => { if (confirm('ログアウトしますか？')) signOut() }} style={{ marginLeft: '0.5rem' }}>
+            ログアウト
+          </button>
+        )}
       </header>
       <main className="main">{routes}</main>
     </div>
