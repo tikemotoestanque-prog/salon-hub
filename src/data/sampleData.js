@@ -39,6 +39,10 @@ export const DEFAULT_SETTINGS = {
   menus: [...DEFAULT_MENUS],
   statuses: STATUS_META,
   thresholds: { ...DEFAULT_THRESHOLDS },
+  // 休日設定
+  closedWeekdays: [2], // 定休日（0=日 … 6=土）。既定は火曜
+  closedDates: [],     // 臨時休業日（ISO日付の配列）
+  staffOff: {},        // スタッフ個別の休み { 'スタッフ名': ['2026-06-25', ...] }
 }
 
 // Googleクチコミ依頼の状態（未送信 → 依頼送信済 → 投稿済）

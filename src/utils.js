@@ -68,6 +68,27 @@ export function pickFreeStaff(reservations, date, start, dur, capacity, staffLis
   return staffList.find((s) => slotFree(reservations, date, s, start, dur, capacity)) || null
 }
 
+// ===== 休日判定 =====
+const WD_NAMES = ['日', '月', '火', '水', '木', '金', '土']
+export function weekdayOf(iso) { return new Date(iso + 'T00:00:00').getDay() }
+// その日が店休日か（定休日 or 臨時休業）。理由つきで返す
+export function shopClosedReason(settings, iso) {
+  if (!settings || !iso) return null
+  const wd = weekdayOf(iso)
+  if ((settings.closedWeekdays || []).includes(wd)) return `定休日（毎週${WD_NAMES[wd]}曜）`
+  if ((settings.closedDates || []).includes(iso)) return '臨時休業日'
+  return null
+}
+export function isShopClosed(settings, iso) { return shopClosedReason(settings, iso) != null }
+// スタッフがその日休みか
+export function isStaffOff(settings, staff, iso) {
+  return !!(settings && settings.staffOff && (settings.staffOff[staff] || []).includes(iso))
+}
+// その日に出勤しているスタッフ一覧
+export function workingStaff(settings, staffList, iso) {
+  return staffList.filter((s) => !isStaffOff(settings, s, iso))
+}
+
 // 来店回数・累計・最終来店日からステータスを自動判定（設定の閾値を使う）
 export function computeStatus(c, th) {
   const days = daysSince(c.lastVisit)

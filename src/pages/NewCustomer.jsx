@@ -17,9 +17,11 @@ export default function NewCustomer() {
   const nav = useNavigate()
   const [params] = useSearchParams()
   const preset = params.get('source')
+  const presetName = params.get('name') || ''
   const fromLine = preset === 'line'
   const [f, setF] = useState(() => ({
     ...empty,
+    name: presetName,
     source: preset && SOURCE_META[preset] ? preset : empty.source,
     line: fromLine ? true : empty.line,
   }))

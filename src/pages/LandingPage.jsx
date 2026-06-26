@@ -28,7 +28,6 @@ export default function LandingPage() {
           <p>カルテ・薬剤レシピ・髪の悩みをすべて記録。次に来たときも、いつものあなたに最適な提案を。</p>
           <div className="lp-cta">
             <button className="lp-btn line" onClick={() => nav('/book')}>📲 LINEで予約する</button>
-            <a className="lp-btn tel" href="tel:0312345678" onClick={(e) => e.preventDefault()}>📞 電話で予約</a>
           </div>
           <div className="lp-note">＊LINE登録で、次回予約・クーポン・マイカルテがすべてLINEに届きます</div>
         </div>

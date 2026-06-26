@@ -8,6 +8,11 @@ export default function Settings() {
   const [capacity, setCapacity] = useState(settings.capacity || {})
   const [menus, setMenus] = useState(settings.menus)
   const [th, setTh] = useState(settings.thresholds)
+  const [closedWeekdays, setClosedWeekdays] = useState(settings.closedWeekdays || [])
+  const [closedDates, setClosedDates] = useState(settings.closedDates || [])
+  const [staffOff, setStaffOff] = useState(settings.staffOff || {})
+  const [newClosed, setNewClosed] = useState('')
+  const [newOff, setNewOff] = useState({}) // { staffName: 'yyyy-mm-dd' }
   const [statusList, setStatusList] = useState(
     Object.entries(settings.statuses).map(([key, m]) => ({ key, ...m }))
   )
@@ -25,6 +30,21 @@ export default function Settings() {
   const addMenu = () => setMenus([...menus, ''])
   const delMenu = (i) => setMenus(menus.filter((_, idx) => idx !== i))
 
+  // --- holidays ---
+  const WD = ['日', '月', '火', '水', '木', '金', '土']
+  const toggleWeekday = (d) => setClosedWeekdays(closedWeekdays.includes(d) ? closedWeekdays.filter((x) => x !== d) : [...closedWeekdays, d].sort())
+  const addClosedDate = () => { if (newClosed && !closedDates.includes(newClosed)) { setClosedDates([...closedDates, newClosed].sort()); setNewClosed('') } }
+  const delClosedDate = (d) => setClosedDates(closedDates.filter((x) => x !== d))
+  const addStaffOff = (s) => {
+    const v = newOff[s]
+    if (!v) return
+    const cur = staffOff[s] || []
+    if (!cur.includes(v)) setStaffOff({ ...staffOff, [s]: [...cur, v].sort() })
+    setNewOff({ ...newOff, [s]: '' })
+  }
+  const delStaffOff = (s, d) => setStaffOff({ ...staffOff, [s]: (staffOff[s] || []).filter((x) => x !== d) })
+  const fmtMD = (iso) => { const dt = new Date(iso + 'T00:00:00'); return `${dt.getMonth() + 1}/${dt.getDate()}（${WD[dt.getDay()]}）` }
+
   // --- statuses ---
   const setStatusAt = (i, k, v) => setStatusList(statusList.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)))
   const addStatus = () => setStatusList([...statusList, { key: 'cust' + Date.now().toString().slice(-5), label: '新ステータス', icon: '🏷', color: '#555555', bg: '#eeeeee' }])
@@ -36,6 +56,9 @@ export default function Settings() {
     const cleanStaff = staff.map((s) => s.trim()).filter(Boolean)
     const cap = {}
     cleanStaff.forEach((s) => { cap[s] = Number(capacity[s]) || 1 })
+    // 退職等で消えたスタッフの個別休みは捨てる
+    const cleanOff = {}
+    cleanStaff.forEach((s) => { if (staffOff[s]?.length) cleanOff[s] = staffOff[s] })
     updateSettings({
       staff: cleanStaff,
       capacity: cap,
@@ -45,6 +68,9 @@ export default function Settings() {
         followupDays: Number(th.followupDays), dormantDays: Number(th.dormantDays),
       },
       statuses,
+      closedWeekdays,
+      closedDates,
+      staffOff: cleanOff,
     })
     return statuses
   }
@@ -93,6 +119,54 @@ export default function Settings() {
           </div>
         ))}
         <button className="btn ghost sm" onClick={addStaff}>＋ スタッフを追加</button>
+      </div>
+
+      {/* 休日 */}
+      <div className="card section">
+        <h3>🗓 休日の設定</h3>
+        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--muted)' }}>定休日・臨時休業日は予約タイムテーブルとお客様の予約画面に反映され、その日は予約できなくなります。</p>
+
+        <div className="hol-block">
+          <label className="hol-label">定休日（毎週）</label>
+          <div className="wd-row">
+            {WD.map((w, i) => (
+              <button key={i} type="button" className={'wd-btn' + (closedWeekdays.includes(i) ? ' on' : '')} onClick={() => toggleWeekday(i)}>{w}</button>
+            ))}
+          </div>
+        </div>
+
+        <div className="hol-block">
+          <label className="hol-label">臨時休業日</label>
+          <div className="hol-add">
+            <input type="date" value={newClosed} onChange={(e) => setNewClosed(e.target.value)} />
+            <button className="btn ghost sm" onClick={addClosedDate} disabled={!newClosed}>＋ 追加</button>
+          </div>
+          <div className="chip-row">
+            {closedDates.length === 0 && <span className="chip-empty">登録なし</span>}
+            {closedDates.map((d) => (
+              <span className="day-chip" key={d}>{fmtMD(d)}<button onClick={() => delClosedDate(d)}>×</button></span>
+            ))}
+          </div>
+        </div>
+
+        <div className="hol-block">
+          <label className="hol-label">スタッフ個別の休み</label>
+          {staff.filter(Boolean).map((s) => (
+            <div className="staff-off" key={s}>
+              <div className="staff-off-name">{s}</div>
+              <div className="hol-add">
+                <input type="date" value={newOff[s] || ''} onChange={(e) => setNewOff({ ...newOff, [s]: e.target.value })} />
+                <button className="btn ghost sm" onClick={() => addStaffOff(s)} disabled={!newOff[s]}>＋ 追加</button>
+              </div>
+              <div className="chip-row">
+                {(staffOff[s] || []).length === 0 && <span className="chip-empty">登録なし</span>}
+                {(staffOff[s] || []).map((d) => (
+                  <span className="day-chip" key={d}>{fmtMD(d)}<button onClick={() => delStaffOff(s, d)}>×</button></span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* メニュー */}

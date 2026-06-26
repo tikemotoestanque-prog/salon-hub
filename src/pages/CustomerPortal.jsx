@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import BookingForm from '../components/BookingForm.jsx'
-import { yen, daysSince, TODAY } from '../utils.js'
+import { daysSince, TODAY } from '../utils.js'
 
 export default function CustomerPortal() {
   const { id } = useParams()
@@ -52,7 +52,6 @@ function Karte({ c, rank }) {
         <div className="cp-name">{c.name}<small>{c.kana}</small></div>
         <div className="cp-stats">
           <div><b>{c.visitCount || 0}</b><span>来店</span></div>
-          <div><b>{yen(c.totalSpent)}</b><span>累計</span></div>
           <div><b>{d == null ? '-' : d + '日前'}</b><span>前回</span></div>
         </div>
       </div>
@@ -61,8 +60,6 @@ function Karte({ c, rank }) {
         <div className="r"><span>前回メニュー</span><b>{c.lastMenu || '-'}</b></div>
         <div className="r"><span>前回ご来店</span><b>{c.lastVisit || '-'}</b></div>
         <div className="r"><span>次回おすすめ</span><b>{c.lastMenu || 'カット'}</b></div>
-        <div className="r"><span>髪質・状態</span><b>{c.hair?.type || '-'} / {c.hair?.condition || '-'}</b></div>
-        {c.allergies?.length > 0 && <div className="r"><span>アレルギー</span><b style={{ color: '#b4502f' }}>{c.allergies.join('、')}</b></div>}
       </div>
 
       <div className="cp-h">これまでの来店</div>

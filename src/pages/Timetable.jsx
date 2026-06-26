@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { RES_SOURCE_META } from '../data/sampleData.js'
-import { TODAY_ISO } from '../utils.js'
+import { TODAY_ISO, shopClosedReason, isStaffOff } from '../utils.js'
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 const ROW_H = 56 // px per hour
@@ -65,9 +65,14 @@ export default function Timetable() {
   const isToday = date === TODAY_ISO
   const nowMin = now.getHours() * 60 + now.getMinutes()
   const showNow = isToday && nowMin >= START * 60 && nowMin <= END * 60
+  const closedReason = shopClosedReason(settings, date)
 
   const openEdit = (r) => setEditing({ ...r })
-  const openAdd = (staff, start) => setEditing(blank(date, staff || STAFF[0], start))
+  const openAdd = (staff, start) => {
+    if (closedReason && !window.confirm(`${dateLabel(date)} は${closedReason}です。それでも予約を入れますか？`)) return
+    if (staff && isStaffOff(settings, staff, date) && !window.confirm(`${staff}さんはこの日お休みです。それでも予約を入れますか？`)) return
+    setEditing(blank(date, staff || STAFF[0], start))
+  }
 
   // ---- ドラッグで時間をずらす ----
   function onPointerDown(e, r) {
@@ -115,13 +120,18 @@ export default function Timetable() {
 
       <div className="tt-datebar">
         <button className="datenav" onClick={() => setDate(shiftDate(date, -1))}>‹ 前日</button>
-        <div className="datecur">
+        <label className="datecur">
           <span className="d">{dateLabel(date)}</span>
-          <span className="c">{dayList.length} 件</span>
-        </div>
+          <span className="c">{closedReason ? closedReason : `${dayList.length} 件`}</span>
+          <input className="tt-datepick" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} title="日付を選んで移動" />
+        </label>
         <button className="datenav" onClick={() => setDate(shiftDate(date, 1))}>翌日 ›</button>
         {!isToday && <button className="datenav today" onClick={() => setDate(TODAY_ISO)}>今日へ</button>}
       </div>
+
+      {closedReason && (
+        <div className="tt-closed-banner">🌙 {dateLabel(date)} は <strong>{closedReason}</strong> です（お客様の予約画面でも受付されません）</div>
+      )}
 
       <div className="tt-legend">
         {Object.entries(RES_SOURCE_META).map(([k, m]) => (
@@ -134,7 +144,10 @@ export default function Timetable() {
         <div className="tt" style={{ '--staff-count': STAFF.length }}>
           <div className="tt-head">
             <div>時間</div>
-            {STAFF.map((s) => <div key={s}>{s}</div>)}
+            {STAFF.map((s) => {
+              const off = isStaffOff(settings, s, date)
+              return <div key={s} className={off ? 'staff-off-head' : ''}>{s}{off && <span className="off-tag">休</span>}</div>
+            })}
           </div>
 
           <div className="tt-body" style={{ gridTemplateColumns: `64px repeat(${STAFF.length}, 1fr)` }}>
@@ -146,7 +159,7 @@ export default function Timetable() {
             </div>
             {/* staff columns */}
             {STAFF.map((staff) => (
-              <div key={staff} style={{ position: 'relative', borderLeft: '1px solid var(--line)' }}>
+              <div key={staff} className={(isStaffOff(settings, staff, date) ? 'tt-col-off' : '') + (closedReason ? ' tt-col-closed' : '')} style={{ position: 'relative', borderLeft: '1px solid var(--line)' }}>
                 {HOURS.map((h) => (
                   <div
                     key={h}
@@ -211,20 +224,40 @@ export default function Timetable() {
             }
           }}
           onOpenCard={(cid) => nav('/customer/' + cid)}
+          onRegisterNew={(name) => nav('/new?name=' + encodeURIComponent(name))}
         />
       )}
     </div>
   )
 }
 
-function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, onOpenCard }) {
+function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, onOpenCard, onRegisterNew }) {
   const [f, setF] = useState(form)
+  const [open, setOpen] = useState(false) // 候補リスト表示中
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
 
-  const pickCustomer = (cid) => {
-    if (!cid) { setF((p) => ({ ...p, customerId: null })); return }
-    const c = customers.find((x) => x.id === cid)
-    if (c) setF((p) => ({ ...p, customerId: c.id, customer: c.name }))
+  // 入力文字で顧客を絞り込み（名前・カナ・電話の部分一致）
+  const q = f.customer.trim()
+  const matches = q
+    ? customers.filter((c) =>
+        (c.name && c.name.includes(q)) ||
+        (c.kana && c.kana.includes(q)) ||
+        (c.phone && c.phone.replace(/-/g, '').includes(q.replace(/-/g, '')))
+      ).slice(0, 6)
+    : []
+  // 入力中の名前が既存顧客と完全一致しているか
+  const exact = customers.find((c) => c.name === q)
+  // リンク済み顧客でなく、候補も無い → 新規のお客様
+  const isUnknown = q.length > 0 && !f.customerId && !exact && matches.length === 0
+
+  const onNameChange = (v) => {
+    // 名前を編集したらリンクを解除（別人になり得るため）
+    setF((p) => ({ ...p, customer: v, customerId: null }))
+    setOpen(true)
+  }
+  const pickCustomer = (c) => {
+    setF((p) => ({ ...p, customerId: c.id, customer: c.name }))
+    setOpen(false)
   }
 
   const save = () => {
@@ -242,15 +275,36 @@ function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, on
         </div>
         <div className="modal-body">
           <div className="field">
-            <label>登録顧客から選ぶ（任意）</label>
-            <select value={f.customerId || ''} onChange={(e) => pickCustomer(e.target.value)}>
-              <option value="">未登録 / 手入力する</option>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </div>
-          <div className="field">
             <label>お客様名 <span className="required">*</span></label>
-            <input value={f.customer} onChange={(e) => set('customer', e.target.value)} placeholder="例：田村 さん（電話）" />
+            <div className="cust-ac">
+              <input
+                value={f.customer}
+                onChange={(e) => onNameChange(e.target.value)}
+                onFocus={() => setOpen(true)}
+                placeholder="お名前を入力（例：田村）"
+                autoComplete="off"
+              />
+              {f.customerId && <span className="ac-linked">✓ 登録済</span>}
+              {open && matches.length > 0 && (
+                <ul className="ac-list">
+                  {matches.map((c) => (
+                    <li key={c.id} onMouseDown={(e) => { e.preventDefault(); pickCustomer(c) }}>
+                      <b>{c.name}</b>
+                      <small>{c.kana}{c.phone ? ` ・ ${c.phone}` : ''}・来店{c.visitCount || 0}回</small>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            {isUnknown && (
+              <div className="ac-new">
+                「{q}」さんの登録はありません。<strong>新規のお客様</strong>として予約します。
+                <button className="link-btn" onClick={() => onRegisterNew(q)}>＋ このお客様をカルテ登録する</button>
+              </div>
+            )}
+            {f.customerId && (
+              <div className="ac-hit">登録済みのお客様にひも付けました。カルテと予約が連動します。</div>
+            )}
           </div>
           <div className="modal-row">
             <div className="field">

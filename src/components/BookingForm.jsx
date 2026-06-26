@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useStore } from '../store.jsx'
-import { slotFree, pickFreeStaff, TODAY_ISO } from '../utils.js'
+import { slotFree, pickFreeStaff, TODAY_ISO, shopClosedReason, isStaffOff, workingStaff } from '../utils.js'
 
 const TIMES = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30']
 const DUR = 60
@@ -21,19 +21,23 @@ export default function BookingForm({ customer }) {
   const [time, setTime] = useState(null)
   const [result, setResult] = useState(null) // {ok, date, time, staff, menu}
 
+  // 休日（店休 or 指名スタッフの休み）
+  const closedReason = shopClosedReason(settings, date)
+  const staffOffToday = staff && isStaffOff(settings, staff, date)
+
   // 選択中の日付・スタッフでの空き時間
-  const slots = useMemo(() => TIMES.map((t) => {
-    const ok = staff
-      ? slotFree(reservations, date, staff, t, DUR, capacity)
-      : staffList.some((s) => slotFree(reservations, date, s, t, DUR, capacity))
-    return { time: t, ok }
-  }), [reservations, date, staff, capacity, staffList])
+  const slots = useMemo(() => {
+    if (closedReason || staffOffToday) return TIMES.map((t) => ({ time: t, ok: false }))
+    // おまかせ時は出勤しているスタッフだけで空きを見る
+    const candidates = staff ? [staff] : workingStaff(settings, staffList, date)
+    return TIMES.map((t) => ({ time: t, ok: candidates.some((s) => slotFree(reservations, date, s, t, DUR, capacity)) }))
+  }, [reservations, date, staff, capacity, staffList, settings, closedReason, staffOffToday])
 
   const anyOpen = slots.some((s) => s.ok)
 
   const submit = () => {
     if (!name.trim() || !time) return
-    const assigned = staff || pickFreeStaff(reservations, date, time, DUR, capacity, staffList)
+    const assigned = staff || pickFreeStaff(reservations, date, time, DUR, capacity, workingStaff(settings, staffList, date))
     // 念のため確定直前にも空き確認（満席なら「無理」メッセージ）
     if (!assigned || !slotFree(reservations, date, assigned, time, DUR, capacity)) {
       setResult({ ok: false, date, time, menu })
@@ -52,6 +56,7 @@ export default function BookingForm({ customer }) {
         <div className={'bk-line ' + (result.ok ? 'ok' : 'ng')}>
           <div className="bk-line-head"><span className="av">✂️</span>Hair Salon GRACE</div>
           {result.ok ? (
+            <>
             <div className="bk-bubble">
               {name.trim()}様、ご予約ありがとうございます！🌿{'\n'}
               下記の内容で承りました。{'\n\n'}
@@ -60,6 +65,13 @@ export default function BookingForm({ customer }) {
               💁 担当：{result.staff}{'\n\n'}
               ご来店を心よりお待ちしております✨
             </div>
+            <div className="bk-bubble sched">
+              🔔 自動配信を予約しました{'\n'}
+              ・前日 17:00 … ご来店リマインド{'\n'}
+              ・来店翌日 … ご来店のお礼＆次回ご提案{'\n'}
+              <span className="bk-sched-tag">SalonHubが自動でお送りします</span>
+            </div>
+            </>
           ) : (
             <div className="bk-bubble">
               {name.trim()}様、申し訳ございません🙏{'\n'}
@@ -93,12 +105,16 @@ export default function BookingForm({ customer }) {
       <label className="cp-field"><span>ご指名</span>
         <select value={staff} onChange={(e) => { setStaff(e.target.value); setTime(null) }}>
           <option value="">おまかせ</option>
-          {staffList.map((s) => <option key={s} value={s}>{s}{capacity[s] > 1 ? `（同時${capacity[s]}名対応）` : ''}</option>)}
+          {staffList.map((s) => <option key={s} value={s}>{s}</option>)}
         </select>
       </label>
 
       <div className="cp-field"><span>空いているお時間（{fmtDate(date)}）</span></div>
-      {anyOpen ? (
+      {closedReason ? (
+        <div className="bk-empty">🌙 {fmtDate(date)} は{closedReason}です。別の日をお選びください🙏</div>
+      ) : staffOffToday ? (
+        <div className="bk-empty">{staff}はこの日お休みです。別の日、または「おまかせ」をお試しください🙏</div>
+      ) : anyOpen ? (
         <div className="bk-slots">
           {slots.map((s) => (
             <button key={s.time} disabled={!s.ok} className={'bk-slot' + (time === s.time ? ' on' : '') + (s.ok ? '' : ' full')} onClick={() => setTime(s.time)}>
