@@ -17,9 +17,10 @@ import LandingPage from './pages/LandingPage.jsx'
 import GuestBooking from './pages/GuestBooking.jsx'
 import AccessPage from './pages/AccessPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
+import LiffPage from './pages/LiffPage.jsx'
 
 // お客様向け（管理画面のヘッダーを出さない独立ページ）
-const CUSTOMER_PREFIXES = ['/lp', '/u/', '/book', '/access', '/menu']
+const CUSTOMER_PREFIXES = ['/lp', '/u/', '/book', '/access', '/menu', '/liff']
 
 export default function App() {
   const { resetData } = useStore()
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/book" element={<GuestBooking />} />
       <Route path="/access" element={<AccessPage />} />
       <Route path="/menu" element={<MenuPage />} />
+      <Route path="/liff" element={<LiffPage />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   )
