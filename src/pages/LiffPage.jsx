@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, hasSupabase } from '../supabaseClient.js'
 
 const LIFF_ID = import.meta.env.VITE_LIFF_ID
 
 export default function LiffPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const tabParam = searchParams.get('tab') // book / card / karte
   const [phase, setPhase] = useState('loading') // loading | verify | error | done
   const [lineUserId, setLineUserId] = useState('')
   const [name, setName] = useState('')
@@ -35,7 +37,8 @@ export default function LiffPage() {
             .maybeSingle()
 
           if (data) {
-            navigate(`/u/${data.id}`, { replace: true })
+            const dest = `/u/${data.id}${tabParam ? `?tab=${tabParam}` : ''}`
+            navigate(dest, { replace: true })
           } else {
             setPhase('verify')
           }
@@ -78,7 +81,8 @@ export default function LiffPage() {
       integrations: { ...(current?.integrations || {}), lineUserId }
     }).eq('id', matched.id)
 
-    navigate(`/u/${matched.id}`, { replace: true })
+    const dest = `/u/${matched.id}${tabParam ? `?tab=${tabParam}` : ''}`
+    navigate(dest, { replace: true })
   }
 
   if (phase === 'loading') {
