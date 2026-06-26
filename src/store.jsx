@@ -154,7 +154,7 @@ export function StoreProvider({ children }) {
     if (!c) return
     const recipe = record.recipe ? { note: record.recipe } : null
     const price = record.price ? Number(record.price) : priceOf(record.menu)
-    const entry = { date: record.date, staff: record.staff, menu: record.menu, note: record.note || '', price, recipe }
+    const entry = { date: record.date, staff: record.staff, menu: record.menu, note: record.note || '', price, recipe, photos: record.photos || [] }
     // 日付順（新しい順）に並べ直す
     const history = [entry, ...c.history].sort((a, b) => (a.date < b.date ? 1 : -1))
     const updated = {

@@ -106,6 +106,15 @@ export default function CustomerDetail() {
                   <div className="tl-body">
                     <div className="menu">{h.menu}</div>
                     {h.note && <div className="note">{h.note}</div>}
+                    {h.photos?.length > 0 && (
+                      <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+                        {h.photos.map((p, pi) => (
+                          <a key={pi} href={p.url} target="_blank" rel="noopener noreferrer">
+                            <img src={p.url} alt={p.tag} style={{ width: 64, height: 64, objectFit: 'cover', borderRadius: 4, border: '1px solid #ddd' }} title={p.tag === 'before' ? '施術前' : '施術後'} />
+                          </a>
+                        ))}
+                      </div>
+                    )}
                     {h.recipe && (
                       <div className="recipe">
                         <div className="rtitle">🧪 薬剤レシピ</div>

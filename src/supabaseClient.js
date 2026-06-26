@@ -10,3 +10,14 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 export const hasSupabase = Boolean(url && anonKey)
 
 export const supabase = hasSupabase ? createClient(url, anonKey) : null
+
+// 施術写真をSupabase Storageにアップロードして公開URLを返す
+export async function uploadPhoto(file, customerId) {
+  if (!supabase) return null
+  const ext = file.name.split('.').pop()
+  const path = `${customerId}/${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('treatment-photos').upload(path, file, { upsert: false })
+  if (error) { console.error('photo upload error', error); return null }
+  const { data } = supabase.storage.from('treatment-photos').getPublicUrl(path)
+  return data.publicUrl
+}

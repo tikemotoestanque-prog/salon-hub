@@ -42,10 +42,19 @@ export default function Dashboard() {
       .sort((a, b) => (b.visitCount || 0) - (a.visitCount || 0))
       .slice(0, 6)
 
-    // 今日の予約
-    const todayRes = reservations.filter((r) => r.date === TODAY_ISO).length
+    // 今日の予約一覧（キャンセル除く・時間順）
+    const todayResList = reservations
+      .filter((r) => r.date === TODAY_ISO && !r.cancelled)
+      .sort((a, b) => a.start.localeCompare(b.start))
+    const todayRes = todayResList.length
 
-    return { monthSales, monthVisits, todaySales, todayVisits, repeat, followup, statusCounts, srcCounts, resTotal, lineRate, lineTargets, todayRes }
+    // 今月誕生日のお客様
+    const thisMonth = String(TODAY.getMonth() + 1).padStart(2, '0')
+    const birthdayCustomers = customers
+      .filter((c) => c.birthday && c.birthday.slice(5, 7) === thisMonth)
+      .sort((a, b) => (a.birthday || '').slice(8).localeCompare((b.birthday || '').slice(8)))
+
+    return { monthSales, monthVisits, todaySales, todayVisits, repeat, followup, statusCounts, srcCounts, resTotal, lineRate, lineTargets, todayRes, todayResList, birthdayCustomers }
   }, [customers, reservations, settings])
 
   const today = new Date(TODAY_ISO + 'T00:00:00')
@@ -100,14 +109,43 @@ export default function Dashboard() {
           </div>
 
           <div className="card section">
-            <h3>📅 今日の動き</h3>
-            <div className="mini-stats">
-              <div><b>{m.todayRes}</b><span>本日の予約</span></div>
-              <div><b>{m.todayVisits}</b><span>本日の来店</span></div>
-              <div><b>{yen(m.todaySales)}</b><span>本日の売上</span></div>
+            <h3>📅 本日の予約（{m.todayRes}件）</h3>
+            {m.todayResList.length === 0 ? (
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>本日の予約はありません</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {m.todayResList.map((r) => (
+                  <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', background: 'var(--bg)', borderRadius: 6, cursor: 'pointer' }} onClick={() => nav('/timetable')}>
+                    <span style={{ fontWeight: 700, fontSize: 13, minWidth: 48 }}>{r.start}</span>
+                    <span style={{ flex: 1, fontSize: 13 }}>{r.customer}</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>{r.menu}</span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)' }}>{r.staff}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="mini-stats" style={{ marginTop: 12 }}>
+              <div><b>{m.todayVisits}</b><span>来店済み</span></div>
+              <div><b>{yen(m.todaySales)}</b><span>本日売上</span></div>
             </div>
             <Link className="link-btn" to="/timetable" style={{ marginTop: 10, display: 'inline-block' }}>予約タイムテーブルへ →</Link>
           </div>
+
+          {m.birthdayCustomers.length > 0 && (
+            <div className="card section">
+              <h3>🎂 今月お誕生日のお客様（{m.birthdayCustomers.length}名）</h3>
+              <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>バースデークーポンやメッセージを送るチャンスです！</p>
+              {m.birthdayCustomers.map((c) => (
+                <div key={c.id} className="target-row" onClick={() => nav('/customer/' + c.id)}>
+                  <div>
+                    <div className="tname">{c.name}</div>
+                    <div className="tsub">{c.birthday?.slice(5).replace('-', '/')} 生まれ / 来店 {c.visitCount}回</div>
+                  </div>
+                  <span className="tcta">カルテ →</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* RIGHT */}
