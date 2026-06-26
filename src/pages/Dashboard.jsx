@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { StatusBadge } from '../components/Badges.jsx'
@@ -10,6 +10,25 @@ const WD = ['日', '月', '火', '水', '木', '金', '土']
 export default function Dashboard() {
   const { customers, reservations, settings } = useStore()
   const nav = useNavigate()
+  const [notifications, setNotifications] = useState([])
+
+  useEffect(() => {
+    fetch('/api/notifications')
+      .then((r) => r.json())
+      .then((d) => setNotifications(d.notifications || []))
+      .catch(() => {})
+  }, [])
+
+  const markRead = async (id) => {
+    await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n))
+  }
+
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   const m = useMemo(() => {
     const monthPrefix = TODAY_ISO.slice(0, 7)
@@ -163,6 +182,39 @@ export default function Dashboard() {
                 <span className="bar-num">{m.srcCounts[k] || 0}</span>
               </div>
             ))}
+          </div>
+
+          <div className="card section">
+            <h3>
+              💬 LINEメッセージ通知
+              {unreadCount > 0 && <span style={{ marginLeft: 8, background: '#d32f2f', color: '#fff', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{unreadCount}件未読</span>}
+            </h3>
+            <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>お客様からのLINEメッセージが届くとここに表示されます。</p>
+            {notifications.length === 0 ? (
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>まだメッセージはありません</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {notifications.slice(0, 10).map((n) => (
+                  <div key={n.id} style={{ padding: '8px 10px', borderRadius: 8, background: n.read ? 'var(--bg)' : '#f0f9ff', border: `1px solid ${n.read ? '#eee' : '#90caf9'}`, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontWeight: n.read ? 400 : 700, fontSize: 13 }}>
+                        {n.customer_name ? (
+                          <span style={{ cursor: 'pointer', color: 'var(--accent)' }} onClick={() => nav('/customer/' + n.customer_id)}>{n.customer_name}</span>
+                        ) : '未登録のお客様'}
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>{n.created_at?.slice(0, 16).replace('T', ' ')}</span>
+                    </div>
+                    <div style={{ fontSize: 13, color: '#333' }}>{n.message}</div>
+                    <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                      {!n.read && (
+                        <button onClick={() => markRead(n.id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #aaa', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#555' }}>既読にする</button>
+                      )}
+                      <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="card section">
