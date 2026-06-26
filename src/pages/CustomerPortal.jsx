@@ -162,7 +162,6 @@ function Card({ c, rank }) {
         <div className="cp-member-top"><span>MEMBER'S CARD</span><span>{rank}</span></div>
         <div className="cp-member-name">{c.name} 様</div>
         <div className="cp-member-no">No. GRACE-{memberNo}</div>
-        <div className="cp-barcode">{Array.from({ length: 34 }).map((_, i) => <i key={i} style={{ width: (i % 3) + 1 + 'px' }} />)}</div>
         <div className="cp-member-foot">ご来店時にこの画面をスタッフへご提示ください</div>
       </div>
 
