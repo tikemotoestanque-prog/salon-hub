@@ -67,7 +67,7 @@ export default function LiffPage() {
     const matched = (candidates || []).find((c) => (c.phone || '').replace(/[-\s]/g, '').endsWith(phoneTrim))
 
     if (!matched) {
-      setErrMsg('お名前または電話番号が一致しませんでした。\nご確認の上、もう一度お試しください。')
+      setPhase('notfound')
       setSubmitting(false)
       return
     }
@@ -87,6 +87,23 @@ export default function LiffPage() {
 
   if (phase === 'error') {
     return <Wrap><p style={{ color: '#d32f2f', whiteSpace: 'pre-line', textAlign: 'center' }}>{errMsg}</p></Wrap>
+  }
+
+  if (phase === 'notfound') {
+    return (
+      <Wrap>
+        <p style={{ textAlign: 'center', fontWeight: 700, marginBottom: '0.75rem' }}>お客様情報が見つかりませんでした</p>
+        <p style={{ fontSize: '0.875rem', color: '#666', textAlign: 'center', lineHeight: 1.7, marginBottom: '1.5rem' }}>
+          お名前・電話番号をご確認いただくか、<br />初めてのご来店の方はご予約フォームからどうぞ。
+        </p>
+        <button onClick={() => setPhase('verify')} style={{ ...btnStyle, background: '#888', marginBottom: '0.75rem' }}>
+          もう一度入力する
+        </button>
+        <a href="/book" style={{ ...btnStyle, background: '#06C755', display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+          ご予約はこちら
+        </a>
+      </Wrap>
+    )
   }
 
   return (
