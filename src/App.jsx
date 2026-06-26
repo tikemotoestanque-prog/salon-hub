@@ -79,10 +79,7 @@ export default function App() {
           <NavLink to="/settings">設定</NavLink>
         </nav>
         <span className="spacer" />
-        <button className="reset-btn" onClick={() => { if (confirm('サンプルデータに戻しますか？')) resetData() }}>
-          データ初期化
-        </button>
-        {session && (
+{session && (
           <button className="reset-btn" onClick={() => { if (confirm('ログアウトしますか？')) signOut() }} style={{ marginLeft: '0.5rem' }}>
             ログアウト
           </button>
