@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import BookingForm from '../components/BookingForm.jsx'
@@ -118,6 +118,43 @@ function Card({ c, rank }) {
   const memberNo = (c.id || '').toUpperCase().padStart(6, '0')
   const stamps = Math.min((c.visitCount || 0) % 10, 10)
   const coupons = couponsFor(c)
+  const storageKey = `used_coupons_${c.id}`
+
+  const [usedKeys, setUsedKeys] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(storageKey) || '[]') } catch { return [] }
+  })
+  const [presenting, setPresenting] = useState(null) // 提示中クーポンのkey
+
+  const handleUse = (key) => setPresenting(key)
+
+  const handleConfirm = (key) => {
+    const next = [...usedKeys, key]
+    setUsedKeys(next)
+    localStorage.setItem(storageKey, JSON.stringify(next))
+    setPresenting(null)
+  }
+
+  const activeCoupons = coupons.filter((cp) => !usedKeys.includes(cp.tag))
+
+  if (presenting) {
+    const cp = coupons.find((x) => x.tag === presenting)
+    return (
+      <div className="cp-sec">
+        <div style={{ background: '#f0f6f1', border: '2px solid #2c5e3c', borderRadius: 12, padding: '1.5rem', textAlign: 'center', marginBottom: '1.5rem' }}>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🎟️</div>
+          <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: '0.25rem' }}>{cp.t}</div>
+          <div style={{ fontSize: '0.85rem', color: '#555', marginBottom: '1.25rem' }}>{cp.s}</div>
+          <div style={{ fontSize: '0.8rem', color: '#2c5e3c', fontWeight: 600, marginBottom: '1.25rem' }}>この画面をスタッフへご提示ください</div>
+          <button onClick={() => handleConfirm(presenting)} style={{ width: '100%', padding: '0.75rem', background: '#2c5e3c', color: '#fff', border: 'none', borderRadius: 8, fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer', marginBottom: '0.75rem' }}>
+            使用済みにする
+          </button>
+          <button onClick={() => setPresenting(null)} style={{ width: '100%', padding: '0.6rem', background: 'transparent', color: '#888', border: '1px solid #ddd', borderRadius: 8, fontSize: '0.875rem', cursor: 'pointer' }}>
+            キャンセル
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="cp-sec">
@@ -137,14 +174,15 @@ function Card({ c, rank }) {
       </div>
 
       <div className="cp-h">保有クーポン</div>
-      {coupons.map((cp, i) => (
-        <div className="cp-coupon" key={i}>
+      {activeCoupons.length === 0 && <div className="cp-muted" style={{ textAlign: 'center', padding: '1rem' }}>利用可能なクーポンはありません</div>}
+      {activeCoupons.map((cp) => (
+        <div className="cp-coupon" key={cp.tag}>
           <div className="cp-coupon-tag">{cp.tag}</div>
           <div className="cp-coupon-main">
             <div className="t">{cp.t}</div>
             <div className="s">{cp.s}</div>
           </div>
-          <button className="cp-coupon-use">使う</button>
+          <button className="cp-coupon-use" onClick={() => handleUse(cp.tag)}>使う</button>
         </div>
       ))}
     </div>
