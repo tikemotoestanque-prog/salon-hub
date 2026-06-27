@@ -270,6 +270,7 @@ const handReservations = [
 // 乱数は固定シードなので、誰が見ても毎回同じ内容になる（再現性あり）
 // ============================================================
 const minToStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+const strToMin = (s) => { const [h, m] = String(s).split(':').map(Number); return h * 60 + m }
 
 function mulberry32(seed) {
   return function () {
@@ -400,63 +401,81 @@ function genCustomers(n) {
 
 export const sampleCustomers = [...handCustomers, ...genCustomers(95)]
 
+// メニューの所要時間（分）を求める。設定マップ優先＋未知メニューはキーワードで概算。
+// 複合メニュー（例: カット+ブリーチ+カラー）にも対応し、30分間隔のような非現実的な枠を防ぐ。
+function menuDuration(menu) {
+  if (!menu) return 60
+  if (DEFAULT_MENU_DURATIONS[menu]) return DEFAULT_MENU_DURATIONS[menu]
+  let d = 0
+  if (/ブリーチ/.test(menu)) d += 90
+  if (/縮毛矯正/.test(menu)) d += 120
+  if (/デジタルパーマ|デジパ/.test(menu)) d += 120
+  else if (/パーマ/.test(menu)) d += 60
+  if (/カラー|白髪染め/.test(menu)) d += 60
+  if (/ヘッドスパ|スパ/.test(menu)) d += 30
+  if (/トリートメント|TR/.test(menu)) d += 20
+  if (/眉/.test(menu)) d += 15
+  if (/カット/.test(menu)) d += 45
+  if (d === 0) d = 60
+  return Math.min(180, Math.max(45, Math.round(d / 15) * 15)) // 15分単位・45〜180分に収める
+}
+
+const WALKIN_MENUS = ['カット', 'カット+カラー', 'カット+パーマ', '白髪染め', 'カット+カラー+TR']
+const OPEN_MIN = 10 * 60   // 営業10:00
+const CLOSE_MIN = 19 * 60  // 営業19:00（この時刻までに施術が終わる枠のみ生成）
+
 function genReservations(registered) {
   const out = []
-  const durPool = [45, 60, 60, 90, 30]
 
   for (let off = -3; off <= 35; off++) {
     const date = dayOffset(off)
     const d = new Date(date + 'T00:00:00')
     const wd = d.getDay() // 0=日, 1=月, 2=火, 6=土
-    const isClosed = wd === 2 // 火曜定休
-    const isWeekend = wd === 0 || wd === 6
-    if (isClosed) continue
+    if (wd === 2) continue // 火曜定休
     if (off === 0) continue // 今日は手書きreservations（handReservations）を使う
+    const isWeekend = wd === 0 || wd === 6
 
-    // 土日は高確率（スタッフ1人あたり3〜5件）、平日は低め（1〜2件）
-    const prob = isWeekend ? 0.72 : 0.20
+    // 各スタッフの1枠ごとに予約が入る確率（枠ベース）。土日は混雑、平日は控えめ。
+    const prob = isWeekend ? 0.78 : 0.32
     const usedCustomerIds = new Set() // 同日に同じ顧客を重複させない
 
     for (const staff of STAFF) {
-      // スタッフ休みの日はスキップ
-      const offDays = SAMPLE_STAFF_OFF[staff] || []
-      if (offDays.includes(date)) continue
+      if ((SAMPLE_STAFF_OFF[staff] || []).includes(date)) continue
 
-      let h = 9, slotIdx = 0
-      while (h <= 18) {
+      let startMin = OPEN_MIN
+      let slotIdx = 0
+      while (startMin <= CLOSE_MIN - 45) {
         if (rnd() < prob) {
-          const startMin = h * 60 + pick([0, 30])
-          const dur = pick(durPool)
-          const endMin = Math.min(startMin + dur, 20 * 60)
+          // 予約主とメニューを先に決める
           let customerId = null, customer = '', menu = '', source = 'line'
           if (rnd() < 0.65) {
-            // 同日重複を避けて顧客を選ぶ（最大10回試行）
             let c = null
             for (let t = 0; t < 10; t++) {
               const cand = pick(registered)
               if (!usedCustomerIds.has(cand.id)) { c = cand; break }
             }
             if (c) {
-              customerId = c.id; customer = c.name; menu = c.lastMenu
+              customerId = c.id; customer = c.name; menu = c.lastMenu || 'カット'
               source = c.integrations.line === '連携済' && rnd() < 0.7 ? 'line' : (rnd() < 0.5 ? 'hotpepper' : 'phone')
               usedCustomerIds.add(c.id)
             } else {
-              // 全員使用済みなら電話客に
-              const sei = pick(SEI)
-              source = 'phone'
-              customer = `${sei[0]} さん（電話）`
-              menu = pick(['カット', 'カット+カラー', 'カット+パーマ', '白髪染め'])
+              source = 'phone'; customer = `${pick(SEI)[0]} さん（電話）`; menu = pick(WALKIN_MENUS)
             }
           } else {
-            const sei = pick(SEI)
             source = rnd() < 0.6 ? 'phone' : 'walkin'
-            customer = `${sei[0]} さん（${source === 'phone' ? '電話' : '来店'}）`
-            menu = pick(['カット', 'カット+カラー', 'カット+パーマ', '白髪染め'])
+            customer = `${pick(SEI)[0]} さん（${source === 'phone' ? '電話' : '来店'}）`
+            menu = pick(WALKIN_MENUS)
           }
-          out.push({ id: `gr${off}_${staff}_${h}_${slotIdx++}`, date, customerId, customer, staff, start: minToStr(startMin), end: minToStr(endMin), menu, source })
-          h += Math.max(1, Math.ceil(dur / 60))
+          // メニューに応じた所要時間で枠を確保。閉店までに終わらなければ後ろの枠を試す。
+          const dur = menuDuration(menu)
+          if (startMin + dur > CLOSE_MIN) { startMin += 30; continue }
+          const endMin = startMin + dur
+          out.push({ id: `gr${off}_${staff}_${slotIdx++}`, date, customerId, customer, staff, start: minToStr(startMin), end: minToStr(endMin), menu, source })
+          // 次の枠：施術終了後、30分刻みに丸める（たまに小休憩を挟む）
+          const gap = rnd() < 0.3 ? 30 : 0
+          startMin = Math.ceil((endMin + gap) / 30) * 30
         } else {
-          h += 1
+          startMin += 30
         }
       }
     }
@@ -470,7 +489,7 @@ const PATTERN_DAYS = {
   '約2ヶ月ごと': 60, '約3ヶ月ごと・不定期': 85,
 }
 
-function genCycleReservations(registered, existingIds) {
+function genCycleReservations(registered, existingReservations) {
   const out = []
   // 日×スタッフ別の使用済み時間帯
   const usedSlots = {}
@@ -478,13 +497,19 @@ function genCycleReservations(registered, existingIds) {
     const k = `${date}_${staff}`
     ;(usedSlots[k] = usedSlots[k] || []).push({ s, e })
   }
-  const findSlot = (date, staff) => {
+  // 既存（通常）予約の枠を先に埋めて、周期予約が重ならないようにする
+  for (const r of existingReservations) {
+    if (r.staff && r.start && r.end) addSlot(r.date, r.staff, strToMin(r.start), strToMin(r.end))
+  }
+  const findSlot = (date, staff, menu) => {
     const k = `${date}_${staff}`
     const used = usedSlots[k] || []
-    const starts = [9,9,10,10,11,13,14,15,16,17].map(h => h * 60 + (rndStaff() < 0.5 ? 0 : 30))
+    const dur = menuDuration(menu)
+    // 営業時間内の :00 / :30 開始候補（早い順）から空き枠を探す
+    const starts = []
+    for (let m = OPEN_MIN; m + dur <= CLOSE_MIN; m += 30) starts.push(m)
     for (const startMin of starts) {
-      const dur = [45,60,60,90,60][Math.floor(rndStaff() * 5)]
-      const endMin = Math.min(startMin + dur, 20 * 60)
+      const endMin = startMin + dur
       if (!used.some(u => startMin < u.e && endMin > u.s)) {
         addSlot(date, staff, startMin, endMin)
         return { start: minToStr(startMin), end: minToStr(endMin) }
@@ -493,7 +518,7 @@ function genCycleReservations(registered, existingIds) {
     return null
   }
 
-  const usedCycleIds = new Set(existingIds)
+  const usedCycleIds = new Set(existingReservations.map((r) => r.id))
 
   for (const c of registered) {
     if (!c.lastVisit || c.status === 'dormant') continue
@@ -520,15 +545,16 @@ function genCycleReservations(registered, existingIds) {
     if (usedCycleIds.has(id)) continue
     usedCycleIds.add(id)
 
-    const slot = findSlot(iso, staff)
+    const menu = c.lastMenu || 'カット'
+    const slot = findSlot(iso, staff, menu)
     if (!slot) continue
 
     const source = c.integrations?.line === '連携済' ? 'line' : (rndStaff() < 0.5 ? 'phone' : 'hotpepper')
-    out.push({ id, date: iso, customerId: c.id, customer: c.name, staff, start: slot.start, end: slot.end, menu: c.lastMenu || 'カット', source })
+    out.push({ id, date: iso, customerId: c.id, customer: c.name, staff, start: slot.start, end: slot.end, menu, source })
   }
   return out
 }
 
 const baseReservations = [...handReservations, ...genReservations(sampleCustomers)]
-const cycleReservations = genCycleReservations(sampleCustomers, new Set(baseReservations.map(r => r.id)))
+const cycleReservations = genCycleReservations(sampleCustomers, baseReservations)
 export const sampleReservations = [...baseReservations, ...cycleReservations]
