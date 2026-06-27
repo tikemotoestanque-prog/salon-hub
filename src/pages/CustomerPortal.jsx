@@ -103,15 +103,14 @@ function BookTab({ c, reservations }) {
 }
 
 function Card({ c, rank }) {
+  const { couponRedemptions, redeemCoupon } = useStore()
   const visitCount = c.visitCount || 0
   const memberNo = (c.id || '').toUpperCase().padStart(6, '0')
   const currentStamps = visitCount % 10
   const completedCycles = Math.floor(visitCount / 10)
-  const storageKey = `used_coupons_${c.id}`
 
-  const [usedKeys, setUsedKeys] = useState(() => {
-    try { return JSON.parse(localStorage.getItem(storageKey) || '[]') } catch { return [] }
-  })
+  // 使用済みクーポンはSupabase（store）が真実。全端末で共有される
+  const usedKeys = couponRedemptions.filter((r) => r.customerId === c.id).map((r) => r.tag)
   const [presenting, setPresenting] = useState(null)
   const [qrUrl, setQrUrl] = useState('')
 
@@ -123,9 +122,7 @@ function Card({ c, rank }) {
 
   const handleUse = (key) => setPresenting(key)
   const handleConfirm = (key) => {
-    const next = [...usedKeys, key]
-    setUsedKeys(next)
-    localStorage.setItem(storageKey, JSON.stringify(next))
+    redeemCoupon(c.id, key, 'customer')
     setPresenting(null)
   }
 

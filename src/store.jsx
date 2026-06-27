@@ -14,7 +14,7 @@ const freshSettings = () => {
   }
   return s
 }
-const freshState = () => ({ customers: sampleCustomers, reservations: sampleReservations, settings: freshSettings() })
+const freshState = () => ({ customers: sampleCustomers, reservations: sampleReservations, settings: freshSettings(), couponRedemptions: [] })
 
 // ===== localStorage（Supabase未設定時のフォールバック） =====
 function loadLocal() {
@@ -27,6 +27,7 @@ function loadLocal() {
         reservations: p.reservations || sampleReservations,
         // 旧データ（settings無し）でも既定値で動くようにマージ
         settings: { ...freshSettings(), ...(p.settings || {}) },
+        couponRedemptions: p.couponRedemptions || [],
       }
     }
   } catch (e) { /* ignore */ }
@@ -62,10 +63,12 @@ const toResRow = (r) => ({
   id: r.id, date: r.date, customer_id: r.customerId || null, customer: r.customer,
   staff: r.staff, start: r.start, end: r.end, menu: r.menu, source: r.source,
 })
+const fromRedemptionRow = (r) => ({ customerId: r.customer_id, tag: r.coupon_tag, usedAt: r.used_at, usedBy: r.used_by || '' })
+const toRedemptionRow = (x) => ({ customer_id: x.customerId, coupon_tag: x.tag, used_by: x.usedBy || null })
 
 export function StoreProvider({ children }) {
   const [state, setState] = useState(hasSupabase
-    ? { customers: [], reservations: [], settings: freshSettings() }
+    ? { customers: [], reservations: [], settings: freshSettings(), couponRedemptions: [] }
     : loadLocal)
   const [loading, setLoading] = useState(hasSupabase)
   const stateRef = useRef(state)
@@ -96,11 +99,18 @@ export function StoreProvider({ children }) {
           await supabase.from('reservations').upsert(sampleReservations.map(toResRow))
           res = sampleReservations.map(toResRow)
         }
+        // クーポン使用済み（テーブル未作成でも壊れないよう失敗許容）
+        let redemptions = []
+        try {
+          const { data: red } = await supabase.from('coupon_redemptions').select('*')
+          redemptions = (red || []).map(fromRedemptionRow)
+        } catch (e) { /* テーブル未作成 = 空でOK */ }
         if (!alive) return
         setState({
           customers: (cust || []).map(fromCustomerRow),
           reservations: (res || []).map(fromResRow),
           settings: { ...freshSettings(), ...((setRow && setRow.data) || {}) },
+          couponRedemptions: redemptions,
         })
       } catch (e) {
         console.error('Supabase load failed, falling back to local:', e)
@@ -124,6 +134,8 @@ export function StoreProvider({ children }) {
   const dbReservation = (r) => { if (hasSupabase) supabase.from('reservations').upsert(toResRow(r)).then(({ error }) => error && console.error('reservation upsert', error)) }
   const dbDeleteReservation = (id) => { if (hasSupabase) supabase.from('reservations').delete().eq('id', id).then(({ error }) => error && console.error('reservation delete', error)) }
   const dbSettings = (s) => { if (hasSupabase) supabase.from('settings').upsert({ id: 1, data: s, updated_at: new Date().toISOString() }).then(({ error }) => error && console.error('settings upsert', error)) }
+  const dbRedeem = (x) => { if (hasSupabase) supabase.from('coupon_redemptions').upsert(toRedemptionRow(x), { onConflict: 'customer_id,coupon_tag' }).then(({ error }) => error && console.error('redeem upsert', error)) }
+  const dbUnredeem = (customerId, tag) => { if (hasSupabase) supabase.from('coupon_redemptions').delete().eq('customer_id', customerId).eq('coupon_tag', tag).then(({ error }) => error && console.error('redeem delete', error)) }
 
   // ----- ミューテーション（state更新＋DB書き込み） -----
   const addCustomer = (c) => {
@@ -210,6 +222,19 @@ export function StoreProvider({ children }) {
     return { ok: true, customer: updated, before, after, milestoneReached }
   }
 
+  // クーポンを使用済みにする（usedBy: 'customer' またはスタッフ名）
+  const redeemCoupon = (customerId, tag, usedBy = 'customer') => {
+    if (stateRef.current.couponRedemptions.some((r) => r.customerId === customerId && r.tag === tag)) return
+    const entry = { customerId, tag, usedAt: new Date().toISOString(), usedBy }
+    setState((s) => ({ ...s, couponRedemptions: [...s.couponRedemptions, entry] }))
+    dbRedeem(entry)
+  }
+  // 使用済みを取り消す（スタッフの消し込みミス用）
+  const unredeemCoupon = (customerId, tag) => {
+    setState((s) => ({ ...s, couponRedemptions: s.couponRedemptions.filter((r) => !(r.customerId === customerId && r.tag === tag)) }))
+    dbUnredeem(customerId, tag)
+  }
+
   const addReservation = (r) => {
     const id = 'r' + String(Date.now()).slice(-6)
     const newRes = { id, ...r }
@@ -279,7 +304,7 @@ export function StoreProvider({ children }) {
   }
 
   return (
-    <StoreContext.Provider value={{ ...state, loading, addCustomer, updateCustomer, addTreatment, checkIn, addReservation, updateReservation, deleteReservation, cancelReservation, updateSettings, recomputeAll, resetData }}>
+    <StoreContext.Provider value={{ ...state, loading, addCustomer, updateCustomer, addTreatment, checkIn, redeemCoupon, unredeemCoupon, addReservation, updateReservation, deleteReservation, cancelReservation, updateSettings, recomputeAll, resetData }}>
       {children}
     </StoreContext.Provider>
   )

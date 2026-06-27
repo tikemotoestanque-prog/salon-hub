@@ -10,7 +10,7 @@ const STEP_CLASS = { '配信済': 's-done', '予約': 's-sched', '未配信': 's
 export default function CustomerDetail() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { customers, updateCustomer } = useStore()
+  const { customers, updateCustomer, couponRedemptions, redeemCoupon, unredeemCoupon } = useStore()
   const c = customers.find((x) => x.id === id)
 
   if (!c) {
@@ -25,9 +25,8 @@ export default function CustomerDetail() {
   const d = daysSince(c.lastVisit)
   const last10 = c.history.slice(0, 10)
 
-  // スタンプ・マイルストーン状況（お客様画面と同じロジック）
-  let usedKeys = []
-  try { usedKeys = JSON.parse(localStorage.getItem(`used_coupons_${c.id}`) || '[]') } catch { usedKeys = [] }
+  // スタンプ・マイルストーン状況（使用済みはSupabase=storeが真実・全端末共有）
+  const usedKeys = couponRedemptions.filter((r) => r.customerId === c.id).map((r) => r.tag)
   const stamp = stampStatus(c, usedKeys)
   const availableCoupons = stamp.earned.filter((e) => !e.used)
 
@@ -173,15 +172,22 @@ export default function CustomerDetail() {
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                   {stamp.earned.map((e) => (
-                    <div key={e.tag} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, opacity: e.used ? 0.5 : 1 }}>
+                    <div key={e.tag} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, opacity: e.used ? 0.55 : 1 }}>
                       <span className="pill">{e.cycleNum * 10}回</span>
                       <span style={{ flex: 1, textDecoration: e.used ? 'line-through' : 'none' }}>{e.emoji} {e.t}</span>
-                      <span className={'step-status ' + (e.used ? 's-done' : 's-sched')}>{e.used ? '使用済み' : '利用可'}</span>
+                      {e.used ? (
+                        <>
+                          <span className="step-status s-done">使用済み</span>
+                          <button className="btn ghost" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => unredeemCoupon(c.id, e.tag)}>取消</button>
+                        </>
+                      ) : (
+                        <button className="btn" style={{ padding: '2px 10px', fontSize: 11 }} onClick={() => redeemCoupon(c.id, e.tag, c.assignedStaff || 'スタッフ')}>使用済みにする</button>
+                      )}
                     </div>
                   ))}
                 </div>
               )}
-              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>※ お客様画面で「使用済み」にすると反映されます</div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>※ お客様画面・スタッフ画面どちらの操作も全端末に即共有されます</div>
             </div>
           </div>
 
