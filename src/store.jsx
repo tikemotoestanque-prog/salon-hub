@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { sampleCustomers, sampleReservations, DEFAULT_SETTINGS, SAMPLE_STAFF_OFF } from './data/sampleData.js'
-import { computeStatus, computePattern, priceOf } from './utils.js'
+import { computeStatus, computePattern, priceOf, TODAY_ISO } from './utils.js'
 import { supabase, hasSupabase } from './supabaseClient.js'
 
 const StoreContext = createContext(null)
@@ -184,6 +184,32 @@ export function StoreProvider({ children }) {
     dbCustomer(updated)
   }
 
+  // QRチェックイン：来店を1回カウントしてスタンプ・ステータスを更新
+  // 戻り値で「新しいマイルストーンに到達したか」を返す
+  const checkIn = (customerId) => {
+    const c = stateRef.current.customers.find((x) => x.id === customerId)
+    if (!c) return { ok: false }
+    const before = c.visitCount || 0
+    const after = before + 1
+    const updated = { ...c, visitCount: after, lastVisit: TODAY_ISO }
+    updated.status = computeStatus(updated, stateRef.current.settings.thresholds)
+    setState((s) => ({ ...s, customers: s.customers.map((x) => (x.id === customerId ? updated : x)) }))
+    dbCustomer(updated)
+    // 来店をダッシュボードに通知
+    if (hasSupabase) {
+      supabase.from('notifications').insert({
+        type: 'checkin',
+        customer_id: c.id,
+        customer_name: c.name,
+        message: `${c.name}様がチェックイン（来店${after}回目）`,
+        read: false,
+        created_at: new Date().toISOString(),
+      }).then(({ error }) => error && console.error('notification insert', error))
+    }
+    const milestoneReached = Math.floor(after / 10) > Math.floor(before / 10)
+    return { ok: true, customer: updated, before, after, milestoneReached }
+  }
+
   const addReservation = (r) => {
     const id = 'r' + String(Date.now()).slice(-6)
     const newRes = { id, ...r }
@@ -253,7 +279,7 @@ export function StoreProvider({ children }) {
   }
 
   return (
-    <StoreContext.Provider value={{ ...state, loading, addCustomer, updateCustomer, addTreatment, addReservation, updateReservation, deleteReservation, cancelReservation, updateSettings, recomputeAll, resetData }}>
+    <StoreContext.Provider value={{ ...state, loading, addCustomer, updateCustomer, addTreatment, checkIn, addReservation, updateReservation, deleteReservation, cancelReservation, updateSettings, recomputeAll, resetData }}>
       {children}
     </StoreContext.Provider>
   )

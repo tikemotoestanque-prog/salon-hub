@@ -12,6 +12,7 @@ import EditCustomer from './pages/EditCustomer.jsx'
 import CustomerMyPage from './pages/CustomerMyPage.jsx'
 import CustomerPortal from './pages/CustomerPortal.jsx'
 import TreatmentRecord from './pages/TreatmentRecord.jsx'
+import CheckIn from './pages/CheckIn.jsx'
 import Settings from './pages/Settings.jsx'
 import LandingPage from './pages/LandingPage.jsx'
 import GuestBooking from './pages/GuestBooking.jsx'
@@ -51,6 +52,7 @@ export default function App() {
       <Route path="/alerts" element={<FollowUpAlerts />} />
       <Route path="/new" element={<NewCustomer />} />
       <Route path="/record/:id" element={<TreatmentRecord />} />
+      <Route path="/checkin" element={<CheckIn />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/lp" element={<LandingPage />} />
       <Route path="/book" element={<GuestBooking />} />
@@ -73,6 +75,7 @@ export default function App() {
         <nav className="nav">
           <NavLink to="/" end>ダッシュボード</NavLink>
           <NavLink to="/timetable">予約TT</NavLink>
+          <NavLink to="/checkin">チェックイン</NavLink>
           <NavLink to="/customers">顧客一覧</NavLink>
           <NavLink to="/alerts">フォロー漏れ</NavLink>
           <NavLink to="/new">新規登録</NavLink>

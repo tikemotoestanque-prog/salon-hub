@@ -135,10 +135,11 @@ export default function Dashboard() {
                 {notifications.slice(0, 15).map((n) => {
                   const isBlock = n.type === 'line_block'
                   const isReservation = n.type === 'reservation'
-                  const bgColor = n.read ? 'var(--bg)' : isBlock ? '#fff3f3' : isReservation ? '#f0faf4' : '#f0f9ff'
-                  const borderColor = n.read ? '#eee' : isBlock ? '#ef9a9a' : isReservation ? '#a5d6a7' : '#90caf9'
-                  const icon = isBlock ? '🚫' : isReservation ? '📅' : '💬'
-                  const iconColor = isBlock ? '#d32f2f' : isReservation ? '#2c5e3c' : '#06C755'
+                  const isCheckin = n.type === 'checkin'
+                  const bgColor = n.read ? 'var(--bg)' : isBlock ? '#fff3f3' : isReservation ? '#f0faf4' : isCheckin ? '#fef6ec' : '#f0f9ff'
+                  const borderColor = n.read ? '#eee' : isBlock ? '#ef9a9a' : isReservation ? '#a5d6a7' : isCheckin ? '#f0c987' : '#90caf9'
+                  const icon = isBlock ? '🚫' : isReservation ? '📅' : isCheckin ? '✅' : '💬'
+                  const iconColor = isBlock ? '#d32f2f' : isReservation ? '#2c5e3c' : isCheckin ? '#c77f1a' : '#06C755'
                   return (
                     <div key={n.id} style={{ padding: '8px 10px', borderRadius: 8, background: bgColor, border: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -155,8 +156,9 @@ export default function Dashboard() {
                         {!n.read && (
                           <button onClick={() => markRead(n.id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #aaa', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#555' }}>既読にする</button>
                         )}
-                        {!isBlock && !isReservation && <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>}
+                        {!isBlock && !isReservation && !isCheckin && <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>}
                         {isReservation && <a href="/timetable" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #2c5e3c', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#2c5e3c', textDecoration: 'none' }}>予約TTを見る →</a>}
+                        {isCheckin && n.customer_id && <button onClick={() => nav('/customer/' + n.customer_id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #c77f1a', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#c77f1a' }}>カルテを見る →</button>}
                       </div>
                     </div>
                   )

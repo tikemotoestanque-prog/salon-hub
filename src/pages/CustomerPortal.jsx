@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import BookingForm from '../components/BookingForm.jsx'
+import QRCode from 'qrcode'
 import { daysSince, TODAY, TODAY_ISO, MILESTONE_COUPONS } from '../utils.js'
 
 export default function CustomerPortal() {
@@ -112,6 +113,13 @@ function Card({ c, rank }) {
     try { return JSON.parse(localStorage.getItem(storageKey) || '[]') } catch { return [] }
   })
   const [presenting, setPresenting] = useState(null)
+  const [qrUrl, setQrUrl] = useState('')
+
+  // チェックイン用QR（スタッフがカメラで読み取る）
+  useEffect(() => {
+    QRCode.toDataURL(`salopi-checkin:${c.id}`, { width: 240, margin: 1 })
+      .then(setQrUrl).catch(() => setQrUrl(''))
+  }, [c.id])
 
   const handleUse = (key) => setPresenting(key)
   const handleConfirm = (key) => {
@@ -162,7 +170,12 @@ function Card({ c, rank }) {
         <div className="cp-member-top"><span>MEMBER'S CARD</span><span>{rank}</span></div>
         <div className="cp-member-name">{c.name} 様</div>
         <div className="cp-member-no">No. GRACE-{memberNo}</div>
-        <div className="cp-member-foot">ご来店時にこの画面をスタッフへご提示ください</div>
+        {qrUrl && (
+          <div style={{ background: '#fff', borderRadius: 10, padding: 10, width: 'fit-content', margin: '12px auto 4px' }}>
+            <img src={qrUrl} alt="チェックインQR" width={120} height={120} style={{ display: 'block' }} />
+          </div>
+        )}
+        <div className="cp-member-foot">ご来店時にこのQRコードをスタッフへご提示ください</div>
       </div>
 
       {/* スタンプカード */}
