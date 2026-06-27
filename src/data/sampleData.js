@@ -413,8 +413,9 @@ function genReservations(registered) {
     if (isClosed) continue
     if (off === 0) continue // 今日は手書きreservations（handReservations）を使う
 
-    // 土日は高確率（10件以上狙い）、平日は低め（5〜7件）
-    const prob = isWeekend ? 0.52 : 0.20
+    // 土日は高確率（スタッフ1人あたり3〜5件）、平日は低め（1〜2件）
+    const prob = isWeekend ? 0.72 : 0.20
+    const usedCustomerIds = new Set() // 同日に同じ顧客を重複させない
 
     for (const staff of STAFF) {
       // スタッフ休みの日はスキップ
@@ -429,9 +430,23 @@ function genReservations(registered) {
           const endMin = Math.min(startMin + dur, 20 * 60)
           let customerId = null, customer = '', menu = '', source = 'line'
           if (rnd() < 0.65) {
-            const c = pick(registered)
-            customerId = c.id; customer = c.name; menu = c.lastMenu
-            source = c.integrations.line === '連携済' && rnd() < 0.7 ? 'line' : (rnd() < 0.5 ? 'hotpepper' : 'phone')
+            // 同日重複を避けて顧客を選ぶ（最大10回試行）
+            let c = null
+            for (let t = 0; t < 10; t++) {
+              const cand = pick(registered)
+              if (!usedCustomerIds.has(cand.id)) { c = cand; break }
+            }
+            if (c) {
+              customerId = c.id; customer = c.name; menu = c.lastMenu
+              source = c.integrations.line === '連携済' && rnd() < 0.7 ? 'line' : (rnd() < 0.5 ? 'hotpepper' : 'phone')
+              usedCustomerIds.add(c.id)
+            } else {
+              // 全員使用済みなら電話客に
+              const sei = pick(SEI)
+              source = 'phone'
+              customer = `${sei[0]} さん（電話）`
+              menu = pick(['カット', 'カット+カラー', 'カット+パーマ', '白髪染め'])
+            }
           } else {
             const sei = pick(SEI)
             source = rnd() < 0.6 ? 'phone' : 'walkin'
