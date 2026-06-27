@@ -179,6 +179,18 @@ export function StoreProvider({ children }) {
     const newRes = { id, ...r }
     setState((s) => ({ ...s, reservations: [...s.reservations, newRes] }))
     dbReservation(newRes)
+    // 予約通知をダッシュボードに記録
+    if (hasSupabase) {
+      const c = stateRef.current.customers.find((x) => x.id === r.customerId)
+      supabase.from('notifications').insert({
+        type: 'reservation',
+        customer_id: r.customerId || null,
+        customer_name: r.customer || null,
+        message: `${r.date} ${r.start}〜 ${r.menu} / 担当：${r.staff}`,
+        read: false,
+        created_at: new Date().toISOString(),
+      }).then(({ error }) => error && console.error('notification insert', error))
+    }
     return id
   }
 

@@ -12,11 +12,17 @@ export default function Dashboard() {
   const nav = useNavigate()
   const [notifications, setNotifications] = useState([])
 
-  useEffect(() => {
+  const fetchNotifications = () => {
     fetch('/api/notifications')
       .then((r) => r.json())
       .then((d) => setNotifications(d.notifications || []))
       .catch(() => {})
+  }
+
+  useEffect(() => {
+    fetchNotifications()
+    const timer = setInterval(fetchNotifications, 30000)
+    return () => clearInterval(timer)
   }, [])
 
   const markRead = async (id) => {
@@ -115,16 +121,48 @@ export default function Dashboard() {
       <div className="dash-grid">
         {/* LEFT */}
         <div>
+          {/* 通知欄（最優先） */}
           <div className="card section">
-            <h3>👥 顧客ステータス内訳</h3>
-            {Object.entries(settings.statuses).map(([k, meta]) => (
-              <div className="bar-row" key={k}>
-                <span className="bar-name">{meta.icon} {meta.label}</span>
-                <div className="bar-track"><div className="bar-fill" style={{ width: `${(m.statusCounts[k] / maxStatus) * 100}%`, background: meta.color }} /></div>
-                <span className="bar-num">{m.statusCounts[k] || 0}</span>
+            <h3>
+              🔔 お客様からの通知
+              {unreadCount > 0 && <span style={{ marginLeft: 8, background: '#d32f2f', color: '#fff', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{unreadCount}件未読</span>}
+            </h3>
+            <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>予約・LINEメッセージ・ブロックなど、対応が必要な通知がここに届きます。（30秒ごと自動更新）</p>
+            {notifications.length === 0 ? (
+              <div style={{ color: 'var(--muted)', fontSize: 13 }}>新しい通知はありません</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {notifications.slice(0, 15).map((n) => {
+                  const isBlock = n.type === 'line_block'
+                  const isReservation = n.type === 'reservation'
+                  const bgColor = n.read ? 'var(--bg)' : isBlock ? '#fff3f3' : isReservation ? '#f0faf4' : '#f0f9ff'
+                  const borderColor = n.read ? '#eee' : isBlock ? '#ef9a9a' : isReservation ? '#a5d6a7' : '#90caf9'
+                  const icon = isBlock ? '🚫' : isReservation ? '📅' : '💬'
+                  const iconColor = isBlock ? '#d32f2f' : isReservation ? '#2c5e3c' : '#06C755'
+                  return (
+                    <div key={n.id} style={{ padding: '8px 10px', borderRadius: 8, background: bgColor, border: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontWeight: n.read ? 400 : 700, fontSize: 13 }}>
+                          <span style={{ color: iconColor, marginRight: 4 }}>{icon}</span>
+                          {n.customer_name ? (
+                            <span style={{ cursor: 'pointer', color: 'var(--accent)' }} onClick={() => nav('/customer/' + n.customer_id)}>{n.customer_name}</span>
+                          ) : '未登録のお客様'}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--muted)' }}>{n.created_at?.slice(0, 16).replace('T', ' ')}</span>
+                      </div>
+                      <div style={{ fontSize: 13, color: isBlock ? '#d32f2f' : '#333' }}>{n.message}</div>
+                      <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                        {!n.read && (
+                          <button onClick={() => markRead(n.id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #aaa', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#555' }}>既読にする</button>
+                        )}
+                        {!isBlock && !isReservation && <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>}
+                        {isReservation && <a href="/timetable" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #2c5e3c', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#2c5e3c', textDecoration: 'none' }}>予約TTを見る →</a>}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-            <Link className="link-btn" to="/customers" style={{ marginTop: 8, display: 'inline-block' }}>顧客一覧を見る →</Link>
+            )}
           </div>
 
           <div className="card section">
@@ -170,6 +208,18 @@ export default function Dashboard() {
         {/* RIGHT */}
         <div>
           <div className="card section">
+            <h3>👥 顧客ステータス内訳</h3>
+            {Object.entries(settings.statuses).map(([k, meta]) => (
+              <div className="bar-row" key={k}>
+                <span className="bar-name">{meta.icon} {meta.label}</span>
+                <div className="bar-track"><div className="bar-fill" style={{ width: `${(m.statusCounts[k] / maxStatus) * 100}%`, background: meta.color }} /></div>
+                <span className="bar-num">{m.statusCounts[k] || 0}</span>
+              </div>
+            ))}
+            <Link className="link-btn" to="/customers" style={{ marginTop: 8, display: 'inline-block' }}>顧客一覧を見る →</Link>
+          </div>
+
+          <div className="card section">
             <h3>📲 予約のLINE化率</h3>
             <div className="line-rate">
               <div className="line-rate-num">{m.lineRate}<span>%</span></div>
@@ -182,45 +232,6 @@ export default function Dashboard() {
                 <span className="bar-num">{m.srcCounts[k] || 0}</span>
               </div>
             ))}
-          </div>
-
-          <div className="card section">
-            <h3>
-              💬 LINEメッセージ通知
-              {unreadCount > 0 && <span style={{ marginLeft: 8, background: '#d32f2f', color: '#fff', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{unreadCount}件未読</span>}
-            </h3>
-            <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>お客様からのLINEメッセージ・ブロック通知が届くとここに表示されます。</p>
-            {notifications.length === 0 ? (
-              <div style={{ color: 'var(--muted)', fontSize: 13 }}>まだメッセージはありません</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {notifications.slice(0, 10).map((n) => {
-                  const isBlock = n.type === 'line_block'
-                  const bgColor = n.read ? 'var(--bg)' : isBlock ? '#fff3f3' : '#f0f9ff'
-                  const borderColor = n.read ? '#eee' : isBlock ? '#ef9a9a' : '#90caf9'
-                  return (
-                  <div key={n.id} style={{ padding: '8px 10px', borderRadius: 8, background: bgColor, border: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontWeight: n.read ? 400 : 700, fontSize: 13 }}>
-                        {isBlock && <span style={{ color: '#d32f2f', marginRight: 4 }}>🚫</span>}
-                        {n.customer_name ? (
-                          <span style={{ cursor: 'pointer', color: 'var(--accent)' }} onClick={() => nav('/customer/' + n.customer_id)}>{n.customer_name}</span>
-                        ) : '未登録のお客様'}
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--muted)' }}>{n.created_at?.slice(0, 16).replace('T', ' ')}</span>
-                    </div>
-                    <div style={{ fontSize: 13, color: isBlock ? '#d32f2f' : '#333' }}>{n.message}</div>
-                    <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
-                      {!n.read && (
-                        <button onClick={() => markRead(n.id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #aaa', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#555' }}>既読にする</button>
-                      )}
-                      {!isBlock && <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>}
-                    </div>
-                  </div>
-                  )
-                })}
-              </div>
-            )}
           </div>
 
           <div className="card section">
