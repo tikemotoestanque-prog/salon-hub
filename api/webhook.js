@@ -32,6 +32,25 @@ export default async function handler(req, res) {
   const events = req.body?.events || []
 
   for (const event of events) {
+    // 友達追加イベント → 即時あいさつメッセージ
+    if (event.type === 'follow') {
+      const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
+      if (token) {
+        await fetch('https://api.line.me/v2/bot/message/push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({
+            to: event.source.userId,
+            messages: [{
+              type: 'text',
+              text: 'ご登録ありがとうございます😊\nHair Salon GRACEです✂️\n\nご予約は下のメニュー「ご予約」から24時間いつでもOKです。\nお悩みやなりたいイメージも、このトークからお気軽にご相談くださいね🌿',
+            }],
+          }),
+        }).catch(() => {})
+      }
+      continue
+    }
+
     // テキストメッセージのみ保存
     if (event.type !== 'message' || event.message?.type !== 'text') continue
 
