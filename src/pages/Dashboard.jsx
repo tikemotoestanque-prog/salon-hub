@@ -136,10 +136,11 @@ export default function Dashboard() {
                   const isBlock = n.type === 'line_block'
                   const isReservation = n.type === 'reservation'
                   const isCheckin = n.type === 'checkin'
-                  const bgColor = n.read ? 'var(--bg)' : isBlock ? '#fff3f3' : isReservation ? '#f0faf4' : isCheckin ? '#fef6ec' : '#f0f9ff'
-                  const borderColor = n.read ? '#eee' : isBlock ? '#ef9a9a' : isReservation ? '#a5d6a7' : isCheckin ? '#f0c987' : '#90caf9'
-                  const icon = isBlock ? '🚫' : isReservation ? '📅' : isCheckin ? '✅' : '💬'
-                  const iconColor = isBlock ? '#d32f2f' : isReservation ? '#2c5e3c' : isCheckin ? '#c77f1a' : '#06C755'
+                  const isNewCustomer = n.type === 'new_customer'
+                  const bgColor = n.read ? 'var(--bg)' : isBlock ? '#fff3f3' : isReservation ? '#f0faf4' : isCheckin ? '#fef6ec' : isNewCustomer ? '#f3f0fb' : '#f0f9ff'
+                  const borderColor = n.read ? '#eee' : isBlock ? '#ef9a9a' : isReservation ? '#a5d6a7' : isCheckin ? '#f0c987' : isNewCustomer ? '#c3b2e8' : '#90caf9'
+                  const icon = isBlock ? '🚫' : isReservation ? '📅' : isCheckin ? '✅' : isNewCustomer ? '🆕' : '💬'
+                  const iconColor = isBlock ? '#d32f2f' : isReservation ? '#2c5e3c' : isCheckin ? '#c77f1a' : isNewCustomer ? '#6a3fb5' : '#06C755'
                   return (
                     <div key={n.id} style={{ padding: '8px 10px', borderRadius: 8, background: bgColor, border: `1px solid ${borderColor}`, display: 'flex', flexDirection: 'column', gap: 4 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -156,9 +157,9 @@ export default function Dashboard() {
                         {!n.read && (
                           <button onClick={() => markRead(n.id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #aaa', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#555' }}>既読にする</button>
                         )}
-                        {!isBlock && !isReservation && !isCheckin && <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>}
+                        {!isBlock && !isReservation && !isCheckin && !isNewCustomer && <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>}
                         {isReservation && <a href="/timetable" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #2c5e3c', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#2c5e3c', textDecoration: 'none' }}>予約TTを見る →</a>}
-                        {isCheckin && n.customer_id && <button onClick={() => nav('/customer/' + n.customer_id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #c77f1a', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#c77f1a' }}>カルテを見る →</button>}
+                        {(isCheckin || isNewCustomer) && n.customer_id && <button onClick={() => nav('/customer/' + n.customer_id)} style={{ fontSize: 11, padding: '2px 8px', border: `1px solid ${iconColor}`, borderRadius: 4, background: 'none', cursor: 'pointer', color: iconColor }}>カルテを見る →</button>}
                       </div>
                     </div>
                   )
