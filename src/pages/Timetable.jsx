@@ -403,6 +403,27 @@ function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, on
   )
 }
 
+// 重なり予約のレイアウト計算（グリーディ列割り当て）
+function computeWeekLayout(dayRes) {
+  const sorted = [...dayRes].sort((a, b) => toMin(a.start) - toMin(b.start))
+  const cols = []
+  for (const r of sorted) {
+    let placed = false
+    for (const col of cols) {
+      if (toMin(col[col.length - 1].end) <= toMin(r.start)) {
+        col.push(r)
+        placed = true
+        break
+      }
+    }
+    if (!placed) cols.push([r])
+  }
+  const result = {}
+  const n = cols.length
+  cols.forEach((col, ci) => col.forEach(r => { result[r.id] = { left: ci / n, width: 1 / n } }))
+  return result
+}
+
 function WeekView({ days, reservations, settings, today, onSelectDay, onAddRes, onEditRes, srcMeta, onPrevWeek, onNextWeek, onToday }) {
   const WHOURS = [9,10,11,12,13,14,15,16,17,18,19]
   const WROW = 60 // px per hour
@@ -460,27 +481,30 @@ function WeekView({ days, reservations, settings, today, onSelectDay, onAddRes, 
               const closed = shopClosedReason(settings, d)
               const isT = d === today
               const dayRes = reservations.filter((r) => r.date === d && !r.cancelled)
+              const layout = computeWeekLayout(dayRes)
               return (
                 <div key={d} onClick={() => !closed && onAddRes(d)} style={{ position: 'relative', height: totalH, borderLeft: '1px solid var(--line)', cursor: closed ? 'default' : 'crosshair', background: closed ? '#f9f9f9' : isT ? 'rgba(232,245,233,0.35)' : undefined }}>
                   {/* 水平ライン */}
                   {WHOURS.map((h) => (
                     <div key={h} style={{ position: 'absolute', top: (h - WSTART) * WROW, left: 0, right: 0, borderBottom: '1px solid var(--line)', height: WROW, pointerEvents: 'none' }} />
                   ))}
-                  {/* 予約ブロック */}
+                  {/* 予約ブロック（重なり時は横分割） */}
                   {dayRes.map((r) => {
                     const sMin = toMin(r.start)
                     const eMin = toMin(r.end)
                     if (eMin <= WSTART * 60 || sMin >= WEND * 60) return null
                     const top = wToY(Math.max(sMin, WSTART * 60))
                     const bot = wToY(Math.min(eMin, WEND * 60))
-                    const h = Math.max(bot - top - 3, 16)
+                    const blockH = Math.max(bot - top - 3, 16)
                     const meta = srcMeta[r.source] || srcMeta.other
-                    const tall = h >= 36
+                    const tall = blockH >= 36
+                    const lyt = layout[r.id] || { left: 0, width: 1 }
+                    const GAP = 1
                     return (
                       <div
                         key={r.id}
                         onClick={(e) => { e.stopPropagation(); onEditRes(r) }}
-                        style={{ position: 'absolute', top: top + 1, left: 2, right: 2, height: h, background: meta.bg, borderLeft: `3px solid ${meta.bar}`, borderRadius: 4, padding: '2px 4px', cursor: 'pointer', overflow: 'hidden', boxSizing: 'border-box', zIndex: 1 }}
+                        style={{ position: 'absolute', top: top + 1, left: `calc(${lyt.left * 100}% + ${GAP}px)`, width: `calc(${lyt.width * 100}% - ${GAP * 2}px)`, height: blockH, background: meta.bg, borderLeft: `3px solid ${meta.bar}`, borderRadius: 4, padding: '2px 4px', cursor: 'pointer', overflow: 'hidden', boxSizing: 'border-box', zIndex: 1 }}
                       >
                         <div style={{ fontSize: 10, color: meta.color, fontWeight: 700, lineHeight: 1.2 }}>{r.start}〜{r.end}</div>
                         <div style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{r.customer || '?'}</div>

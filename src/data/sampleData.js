@@ -381,7 +381,6 @@ function genReservations(registered) {
   const out = []
   const durPool = [45, 60, 60, 90, 30]
   for (let off = -3; off <= 10; off++) {
-    if (off === 0) continue // 基準日は手書きを使う
     const date = dayOffset(off)
     for (const staff of STAFF) {
       let h = 9
