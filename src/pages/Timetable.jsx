@@ -404,8 +404,12 @@ function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, on
 }
 
 function WeekView({ days, reservations, settings, today, onSelectDay, onAddRes, onEditRes, srcMeta, onPrevWeek, onNextWeek, onToday }) {
-  const hours = [9,10,11,12,13,14,15,16,17,18,19,20]
-  const ROW = 48
+  const WHOURS = [9,10,11,12,13,14,15,16,17,18,19]
+  const WROW = 60 // px per hour
+  const WSTART = 9
+  const WEND = 20
+  const wToY = (min) => ((min - WSTART * 60) / 60) * WROW
+  const totalH = WHOURS.length * WROW
 
   return (
     <div>
@@ -420,48 +424,74 @@ function WeekView({ days, reservations, settings, today, onSelectDay, onAddRes, 
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: `52px repeat(7, 1fr)`, minWidth: 640, borderTop: '1px solid var(--line)' }}>
-          {/* ヘッダー */}
-          <div style={{ borderBottom: '2px solid var(--line)', background: 'var(--bg)' }} />
-          {days.map((d) => {
-            const isToday = d === today
-            const dayRes = reservations.filter((r) => r.date === d && !r.cancelled)
-            const closed = shopClosedReason(settings, d)
-            const wd = WD[new Date(d + 'T00:00:00').getDay()]
-            return (
-              <div key={d} onClick={() => onSelectDay(d)} style={{ padding: '6px 4px', textAlign: 'center', borderLeft: '1px solid var(--line)', borderBottom: '2px solid var(--line)', cursor: 'pointer', background: isToday ? '#e8f5e9' : closed ? '#fafafa' : 'var(--bg)' }}>
-                <div style={{ fontSize: 11, color: isToday ? '#2c5e3c' : 'var(--muted)' }}>{d.slice(5).replace('-','/')}</div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: isToday ? '#2c5e3c' : closed ? 'var(--muted)' : undefined }}>{wd}</div>
-                <div style={{ fontSize: 11, marginTop: 2 }}>
-                  {closed ? <span style={{ color: 'var(--muted)' }}>休</span> : <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{dayRes.length}件</span>}
-                </div>
-              </div>
-            )
-          })}
-
-          {/* 時間 × 日 グリッド */}
-          {hours.map((h) => (
-            <>
-              <div key={'t'+h} style={{ height: ROW, borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 2, fontSize: 11, color: 'var(--muted)', background: 'var(--bg)' }}>{h}:00</div>
-              {days.map((d) => {
-                const closed = shopClosedReason(settings, d)
-                const slot = reservations.filter((r) => r.date === d && !r.cancelled && r.start.startsWith(`${String(h).padStart(2,'0')}`))
-                return (
-                  <div key={d+h} onClick={() => !closed && onAddRes(d)} style={{ height: ROW, borderLeft: '1px solid var(--line)', borderBottom: '1px solid var(--line)', padding: '2px 3px', cursor: closed ? 'default' : 'pointer', background: closed ? '#f9f9f9' : undefined, position: 'relative' }}>
-                    {slot.map((r) => {
-                      const meta = srcMeta[r.source] || srcMeta.other
-                      return (
-                        <div key={r.id} onClick={(e) => { e.stopPropagation(); onEditRes(r) }} style={{ background: meta.bg, borderLeft: `3px solid ${meta.bar}`, borderRadius: 3, padding: '1px 4px', marginBottom: 2, fontSize: 11, cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                          {r.start} {r.customer}
-                        </div>
-                      )
-                    })}
+      <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ minWidth: 700 }}>
+          {/* ヘッダー行 */}
+          <div style={{ display: 'grid', gridTemplateColumns: `48px repeat(7, 1fr)`, borderBottom: '2px solid var(--line)' }}>
+            <div style={{ background: 'var(--bg)' }} />
+            {days.map((d) => {
+              const isT = d === today
+              const dayRes = reservations.filter((r) => r.date === d && !r.cancelled)
+              const closed = shopClosedReason(settings, d)
+              const wd = WD[new Date(d + 'T00:00:00').getDay()]
+              return (
+                <div key={d} onClick={() => onSelectDay(d)} style={{ padding: '6px 4px', textAlign: 'center', borderLeft: '1px solid var(--line)', cursor: 'pointer', background: isT ? '#e8f5e9' : closed ? '#f5f5f5' : 'var(--surface)' }}>
+                  <div style={{ fontSize: 11, color: isT ? '#2c5e3c' : 'var(--muted)' }}>{d.slice(5).replace('-','/')}</div>
+                  <div style={{ fontWeight: 700, fontSize: 15, color: isT ? '#2c5e3c' : closed ? '#bbb' : '#333' }}>{wd}</div>
+                  <div style={{ fontSize: 11, marginTop: 2 }}>
+                    {closed ? <span style={{ color: '#bbb' }}>休</span> : <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{dayRes.length}件</span>}
                   </div>
-                )
-              })}
-            </>
-          ))}
+                </div>
+              )
+            })}
+          </div>
+
+          {/* 時間グリッド + 予約ブロック */}
+          <div style={{ display: 'grid', gridTemplateColumns: `48px repeat(7, 1fr)`, position: 'relative' }}>
+            {/* 時間ラベル列 */}
+            <div style={{ background: 'var(--bg)' }}>
+              {WHOURS.map((h) => (
+                <div key={h} style={{ height: WROW, borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 3, fontSize: 11, color: 'var(--muted)' }}>{h}:00</div>
+              ))}
+            </div>
+
+            {/* 各日の列 */}
+            {days.map((d) => {
+              const closed = shopClosedReason(settings, d)
+              const isT = d === today
+              const dayRes = reservations.filter((r) => r.date === d && !r.cancelled)
+              return (
+                <div key={d} onClick={() => !closed && onAddRes(d)} style={{ position: 'relative', height: totalH, borderLeft: '1px solid var(--line)', cursor: closed ? 'default' : 'crosshair', background: closed ? '#f9f9f9' : isT ? 'rgba(232,245,233,0.35)' : undefined }}>
+                  {/* 水平ライン */}
+                  {WHOURS.map((h) => (
+                    <div key={h} style={{ position: 'absolute', top: (h - WSTART) * WROW, left: 0, right: 0, borderBottom: '1px solid var(--line)', height: WROW, pointerEvents: 'none' }} />
+                  ))}
+                  {/* 予約ブロック */}
+                  {dayRes.map((r) => {
+                    const sMin = toMin(r.start)
+                    const eMin = toMin(r.end)
+                    if (eMin <= WSTART * 60 || sMin >= WEND * 60) return null
+                    const top = wToY(Math.max(sMin, WSTART * 60))
+                    const bot = wToY(Math.min(eMin, WEND * 60))
+                    const h = Math.max(bot - top - 3, 16)
+                    const meta = srcMeta[r.source] || srcMeta.other
+                    const tall = h >= 36
+                    return (
+                      <div
+                        key={r.id}
+                        onClick={(e) => { e.stopPropagation(); onEditRes(r) }}
+                        style={{ position: 'absolute', top: top + 1, left: 2, right: 2, height: h, background: meta.bg, borderLeft: `3px solid ${meta.bar}`, borderRadius: 4, padding: '2px 4px', cursor: 'pointer', overflow: 'hidden', boxSizing: 'border-box', zIndex: 1 }}
+                      >
+                        <div style={{ fontSize: 10, color: meta.color, fontWeight: 700, lineHeight: 1.2 }}>{r.start}〜{r.end}</div>
+                        <div style={{ fontSize: 11, fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{r.customer || '?'}</div>
+                        {tall && <div style={{ fontSize: 10, color: '#666', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>{r.menu}</div>}
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>
