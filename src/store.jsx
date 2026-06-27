@@ -87,11 +87,14 @@ export function StoreProvider({ children }) {
         const { data: { session } } = await supabase.auth.getSession()
         if (session && (!cust || cust.length === 0)) {
           await supabase.from('customers').upsert(sampleCustomers.map(toCustomerRow))
-          await supabase.from('reservations').upsert(sampleReservations.map(toResRow))
           await supabase.from('settings').upsert({ id: 1, data: freshSettings() })
           cust = sampleCustomers.map(toCustomerRow)
-          res = sampleReservations.map(toResRow)
           setRow = { data: freshSettings() }
+        }
+        // 予約テーブルが空なら（顧客の有無に関わらず）再シード
+        if (session && (!res || res.length === 0)) {
+          await supabase.from('reservations').upsert(sampleReservations.map(toResRow))
+          res = sampleReservations.map(toResRow)
         }
         if (!alive) return
         setState({
