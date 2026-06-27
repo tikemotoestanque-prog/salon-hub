@@ -181,11 +181,13 @@ export function StoreProvider({ children }) {
     const entry = { date: record.date, staff: record.staff, menu: record.menu, note: record.note || '', price, recipe, photos: record.photos || [] }
     // 日付順（新しい順）に並べ直す
     const history = [entry, ...c.history].sort((a, b) => (a.date < b.date ? 1 : -1))
+    // 来店回数は「1日1来店」。同日に既に来店記録／チェックイン済みなら二重カウントしない
+    const alreadyCounted = c.lastVisit === record.date || c.history.some((h) => h.date === record.date)
     const updated = {
       ...c,
       lastVisit: history[0].date,
       lastMenu: history[0].menu,
-      visitCount: (c.visitCount || 0) + 1,
+      visitCount: (c.visitCount || 0) + (alreadyCounted ? 0 : 1),
       totalSpent: (c.totalSpent || 0) + price,
       history,
     }
@@ -202,7 +204,9 @@ export function StoreProvider({ children }) {
     const c = stateRef.current.customers.find((x) => x.id === customerId)
     if (!c) return { ok: false }
     const before = c.visitCount || 0
-    const after = before + 1
+    // 1日1来店：本日すでに来店カウント済みなら二重カウントしない
+    const alreadyToday = c.lastVisit === TODAY_ISO || c.history.some((h) => h.date === TODAY_ISO)
+    const after = alreadyToday ? before : before + 1
     const updated = { ...c, visitCount: after, lastVisit: TODAY_ISO }
     updated.status = computeStatus(updated, stateRef.current.settings.thresholds)
     setState((s) => ({ ...s, customers: s.customers.map((x) => (x.id === customerId ? updated : x)) }))
@@ -213,13 +217,15 @@ export function StoreProvider({ children }) {
         type: 'checkin',
         customer_id: c.id,
         customer_name: c.name,
-        message: `${c.name}様がチェックイン（来店${after}回目）`,
+        message: alreadyToday
+          ? `${c.name}様がチェックイン（本日2回目・来店回数は据え置き）`
+          : `${c.name}様がチェックイン（来店${after}回目）`,
         read: false,
         created_at: new Date().toISOString(),
       }).then(({ error }) => error && console.error('notification insert', error))
     }
     const milestoneReached = Math.floor(after / 10) > Math.floor(before / 10)
-    return { ok: true, customer: updated, before, after, milestoneReached }
+    return { ok: true, customer: updated, before, after, milestoneReached, alreadyToday }
   }
 
   // クーポンを使用済みにする（usedBy: 'customer' またはスタッフ名）

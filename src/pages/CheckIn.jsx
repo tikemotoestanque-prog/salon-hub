@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import jsQR from 'jsqr'
 import { useStore } from '../store.jsx'
-import { stampStatus, MILESTONE_COUPONS } from '../utils.js'
+import { stampStatus, MILESTONE_COUPONS, TODAY_ISO } from '../utils.js'
 
 // QRテキストから顧客IDを取り出す（salopi-checkin:ID / .../u/ID / 生ID に対応）
 function parseId(text) {
@@ -173,6 +173,7 @@ export default function CheckIn() {
 
 function ConfirmCard({ c, onConfirm, onCancel }) {
   const stamp = stampStatus(c)
+  const visitedToday = c.lastVisit === TODAY_ISO || (c.history || []).some((h) => h.date === TODAY_ISO)
   return (
     <div className="card section" style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
       <div style={{ fontSize: 13, color: 'var(--muted)' }}>このお客様をチェックインしますか？</div>
@@ -185,7 +186,9 @@ function ConfirmCard({ c, onConfirm, onCancel }) {
         ))}
       </div>
       <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8 }}>
-        チェックインで <b>{stamp.visitCount + 1}</b> 回目・あと {stamp.nextMilestone - stamp.visitCount - 1} 回で次の特典
+        {visitedToday
+          ? '本日はすでにご来店済みです（スタンプは1日1回・来店回数は増えません）'
+          : <>チェックインで <b>{stamp.visitCount + 1}</b> 回目・あと {stamp.nextMilestone - stamp.visitCount - 1} 回で次の特典</>}
       </div>
 
       <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
@@ -197,7 +200,7 @@ function ConfirmCard({ c, onConfirm, onCancel }) {
 }
 
 function ResultCard({ result, onNext }) {
-  const { customer, after, milestoneReached } = result
+  const { customer, after, milestoneReached, alreadyToday } = result
   const stamp = stampStatus(customer)
   const unlocked = milestoneReached
     ? MILESTONE_COUPONS[Math.min(Math.floor(after / 10) - 1, MILESTONE_COUPONS.length - 1)]
@@ -206,7 +209,11 @@ function ResultCard({ result, onNext }) {
     <div className="card section" style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
       <div style={{ fontSize: 40 }}>{milestoneReached ? '🎉' : '✅'}</div>
       <div style={{ fontSize: 20, fontWeight: 700, margin: '4px 0' }}>{customer.name} 様 チェックイン完了</div>
-      <div style={{ fontSize: 14, color: 'var(--muted)' }}>来店 <b>{after}</b> 回目を記録しました</div>
+      <div style={{ fontSize: 14, color: 'var(--muted)' }}>
+        {alreadyToday
+          ? `本日2回目のご来店です（来店回数は ${after} 回のまま）`
+          : <>来店 <b>{after}</b> 回目を記録しました</>}
+      </div>
 
       <div className="cp-stamps" style={{ maxWidth: 320, margin: '16px auto 0' }}>
         {Array.from({ length: 10 }).map((_, i) => (
