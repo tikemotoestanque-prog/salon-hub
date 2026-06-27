@@ -283,6 +283,29 @@ const rnd = mulberry32(20260624)
 const pick = (a) => a[Math.floor(rnd() * a.length)]
 const int = (lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1))
 
+// スタッフ休み用の独立したシード（予約・顧客の乱数に影響しない）
+const rndStaff = mulberry32(99887766)
+const pickStaff = (a) => a[Math.floor(rndStaff() * a.length)]
+
+// 定休日（火曜=2）を除く平日からスタッフの週1休みを生成
+function computeStaffOff() {
+  const result = {}
+  STAFF.forEach(s => { result[s] = [] })
+  for (let weekBase = -14; weekBase <= 21; weekBase += 7) {
+    STAFF.forEach(s => {
+      const candidates = []
+      for (let i = weekBase; i < weekBase + 5; i++) {
+        const d = new Date(TODAY_BASE); d.setDate(d.getDate() + i)
+        const wd = d.getDay()
+        if (wd !== 0 && wd !== 2 && wd !== 6) candidates.push(dayOffset(i))
+      }
+      if (candidates.length > 0) result[s].push(pickStaff(candidates))
+    })
+  }
+  return result
+}
+export const SAMPLE_STAFF_OFF = computeStaffOff()
+
 const SEI = [['佐藤', 'サトウ'], ['鈴木', 'スズキ'], ['高橋', 'タカハシ'], ['田中', 'タナカ'], ['伊藤', 'イトウ'], ['渡辺', 'ワタナベ'], ['山本', 'ヤマモト'], ['中村', 'ナカムラ'], ['小林', 'コバヤシ'], ['加藤', 'カトウ'], ['吉田', 'ヨシダ'], ['山田', 'ヤマダ'], ['佐々木', 'ササキ'], ['山口', 'ヤマグチ'], ['松本', 'マツモト'], ['井上', 'イノウエ'], ['木村', 'キムラ'], ['林', 'ハヤシ'], ['斎藤', 'サイトウ'], ['清水', 'シミズ'], ['山崎', 'ヤマザキ'], ['森', 'モリ'], ['池田', 'イケダ'], ['橋本', 'ハシモト'], ['阿部', 'アベ'], ['石川', 'イシカワ'], ['中島', 'ナカジマ'], ['前田', 'マエダ'], ['藤田', 'フジタ'], ['岡田', 'オカダ']]
 const MEI_F = [['花子', 'ハナコ'], ['美咲', 'ミサキ'], ['由美', 'ユミ'], ['彩', 'アヤ'], ['恵', 'メグミ'], ['さくら', 'サクラ'], ['陽子', 'ヨウコ'], ['里奈', 'リナ'], ['真央', 'マオ'], ['美穂', 'ミホ'], ['七海', 'ナナミ'], ['結衣', 'ユイ'], ['遥', 'ハルカ'], ['楓', 'カエデ'], ['麻衣', 'マイ'], ['奈々', 'ナナ'], ['千尋', 'チヒロ'], ['茜', 'アカネ'], ['瞳', 'ヒトミ'], ['咲', 'サキ']]
 const MEI_M = [['大輔', 'ダイスケ'], ['健一', 'ケンイチ'], ['翔', 'ショウ'], ['拓也', 'タクヤ'], ['誠', 'マコト'], ['亮', 'リョウ'], ['和也', 'カズヤ'], ['直樹', 'ナオキ'], ['駿', 'シュン'], ['健太', 'ケンタ'], ['雄大', 'ユウダイ'], ['翔太', 'ショウタ'], ['大樹', 'ダイキ'], ['涼介', 'リョウスケ'], ['悠斗', 'ユウト'], ['颯太', 'ソウタ'], ['陽介', 'ヨウスケ'], ['修平', 'シュウヘイ'], ['竜也', 'タツヤ'], ['智也', 'トモヤ']]
@@ -380,12 +403,26 @@ export const sampleCustomers = [...handCustomers, ...genCustomers(95)]
 function genReservations(registered) {
   const out = []
   const durPool = [45, 60, 60, 90, 30]
+
   for (let off = -3; off <= 10; off++) {
     const date = dayOffset(off)
+    const d = new Date(date + 'T00:00:00')
+    const wd = d.getDay() // 0=日, 1=月, 2=火, 6=土
+    const isClosed = wd === 2 // 火曜定休
+    const isWeekend = wd === 0 || wd === 6
+    if (isClosed) continue
+
+    // 土日は高確率（10件以上狙い）、平日は低め（5〜7件）
+    const prob = isWeekend ? 0.52 : 0.20
+
     for (const staff of STAFF) {
-      let h = 9
+      // スタッフ休みの日はスキップ
+      const offDays = SAMPLE_STAFF_OFF[staff] || []
+      if (offDays.includes(date)) continue
+
+      let h = 9, slotIdx = 0
       while (h <= 18) {
-        if (rnd() < 0.33) {
+        if (rnd() < prob) {
           const startMin = h * 60 + pick([0, 30])
           const dur = pick(durPool)
           const endMin = Math.min(startMin + dur, 20 * 60)
@@ -393,7 +430,6 @@ function genReservations(registered) {
           if (rnd() < 0.65) {
             const c = pick(registered)
             customerId = c.id; customer = c.name; menu = c.lastMenu
-            // LINE連携済はLINE予約多め、それ以外は電話/ホットペッパーに分散
             source = c.integrations.line === '連携済' && rnd() < 0.7 ? 'line' : (rnd() < 0.5 ? 'hotpepper' : 'phone')
           } else {
             const sei = pick(SEI)
@@ -401,7 +437,7 @@ function genReservations(registered) {
             customer = `${sei[0]} さん（${source === 'phone' ? '電話' : '来店'}）`
             menu = pick(['カット', 'カット+カラー', 'カット+パーマ', '白髪染め'])
           }
-          out.push({ id: `gr${off}_${staff}_${h}`, date, customerId, customer, staff, start: minToStr(startMin), end: minToStr(endMin), menu, source })
+          out.push({ id: `gr${off}_${staff}_${h}_${slotIdx++}`, date, customerId, customer, staff, start: minToStr(startMin), end: minToStr(endMin), menu, source })
           h += Math.max(1, Math.ceil(dur / 60))
         } else {
           h += 1

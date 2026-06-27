@@ -1,12 +1,19 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { sampleCustomers, sampleReservations, DEFAULT_SETTINGS } from './data/sampleData.js'
+import { sampleCustomers, sampleReservations, DEFAULT_SETTINGS, SAMPLE_STAFF_OFF } from './data/sampleData.js'
 import { computeStatus, computePattern, priceOf } from './utils.js'
 import { supabase, hasSupabase } from './supabaseClient.js'
 
 const StoreContext = createContext(null)
 const LS_KEY = 'salonhub.v1'
 
-const freshSettings = () => JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+const freshSettings = () => {
+  const s = JSON.parse(JSON.stringify(DEFAULT_SETTINGS))
+  // スタッフの週1休みをサンプルデータから適用（localStorageに保存済みの場合は上書きしない）
+  if (!s.staffOff || Object.values(s.staffOff).every(v => v.length === 0)) {
+    s.staffOff = JSON.parse(JSON.stringify(SAMPLE_STAFF_OFF))
+  }
+  return s
+}
 const freshState = () => ({ customers: sampleCustomers, reservations: sampleReservations, settings: freshSettings() })
 
 // ===== localStorage（Supabase未設定時のフォールバック） =====
