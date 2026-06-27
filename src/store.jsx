@@ -25,8 +25,8 @@ function loadLocal() {
       return {
         customers: p.customers || sampleCustomers,
         reservations: p.reservations || sampleReservations,
-        // 旧データ（settings無し）でも既定値で動くようにマージ
-        settings: { ...freshSettings(), ...(p.settings || {}) },
+        // 旧データ（settings無し）でも既定値で動くようにマージ。staffOffは実行時生成を優先
+        settings: { ...freshSettings(), ...(p.settings || {}), staffOff: SAMPLE_STAFF_OFF },
         couponRedemptions: p.couponRedemptions || [],
       }
     }
@@ -109,7 +109,8 @@ export function StoreProvider({ children }) {
         setState({
           customers: (cust || []).map(fromCustomerRow),
           reservations: (res || []).map(fromResRow),
-          settings: { ...freshSettings(), ...((setRow && setRow.data) || {}) },
+          // staffOffは実行時生成（SAMPLE_STAFF_OFF）を真実とし、保存値で上書きされないようにする
+          settings: { ...freshSettings(), ...((setRow && setRow.data) || {}), staffOff: SAMPLE_STAFF_OFF },
           couponRedemptions: redemptions,
         })
       } catch (e) {

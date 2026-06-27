@@ -288,19 +288,18 @@ const int = (lo, hi) => lo + Math.floor(rnd() * (hi - lo + 1))
 const rndStaff = mulberry32(99887766)
 const pickStaff = (a) => a[Math.floor(rndStaff() * a.length)]
 
-// 定休日（火曜=2）を除く平日からスタッフの週1休みを生成
+// スタッフの週1休みを「曜日固定」で生成する。
+// 火曜は定休、土日は繁忙で休まない。残る 月・水・木・金 にスタッフを1人ずつ割り当てる
+// → どの平日も必ず1人だけ休み（＝常に3人稼働）。同日に2人休む偏りを防ぎ、日々の件数を安定させる。
+const OFF_WEEKDAYS = [1, 3, 4, 5] // 月・水・木・金
 function computeStaffOff() {
   const result = {}
   STAFF.forEach(s => { result[s] = [] })
-  for (let weekBase = -14; weekBase <= 21; weekBase += 7) {
-    STAFF.forEach(s => {
-      const candidates = []
-      for (let i = weekBase; i < weekBase + 5; i++) {
-        const d = new Date(TODAY_BASE); d.setDate(d.getDate() + i)
-        const wd = d.getDay()
-        if (wd !== 0 && wd !== 2 && wd !== 6) candidates.push(dayOffset(i))
-      }
-      if (candidates.length > 0) result[s].push(pickStaff(candidates))
+  for (let i = -21; i <= 45; i++) {
+    const d = new Date(TODAY_BASE); d.setDate(d.getDate() + i)
+    const wd = d.getDay()
+    STAFF.forEach((s, si) => {
+      if (OFF_WEEKDAYS[si % OFF_WEEKDAYS.length] === wd) result[s].push(dayOffset(i))
     })
   }
   return result
