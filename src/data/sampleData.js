@@ -420,35 +420,57 @@ function menuDuration(menu) {
   return Math.min(180, Math.max(45, Math.round(d / 15) * 15)) // 15分単位・45〜180分に収める
 }
 
-const WALKIN_MENUS = ['カット', 'カット+カラー', 'カット+パーマ', '白髪染め', 'カット+カラー+TR']
+const NEW_MENUS = ['カット', 'カット+カラー', '白髪染め', 'カット+カラー+TR'] // 新規客が選びやすいメニュー
 const OPEN_MIN = 10 * 60   // 営業10:00
 const CLOSE_MIN = 19 * 60  // 営業19:00（この時刻までに施術が終わる枠のみ生成）
+// 予約に占める「新規客」の割合。新規はHPB/来店から、リピーターはLINE/電話から。
+// ≒ 1日あたり約1名の新規（月30名前後想定）。HPBは新規以外には付けない（脱HPB＝LINE誘導）。
+const NEW_CUSTOMER_RATIO = 0.09
 
-function genReservations(registered) {
+// リピーター（既存客）の予約経路：LINE連携済はLINE中心、未連携は電話。HPBは使わない。
+function repeatSource(c) {
+  if (c.integrations?.line === '連携済') return rnd() < 0.85 ? 'line' : 'phone'
+  return 'phone'
+}
+
+function genReservations(registered, presets = []) {
   const out = []
+  // 当日（手書き予約）の埋まり枠と顧客を事前に把握して、重複なく追加生成する
+  const presetSlots = {}   // `${date}_${staff}` -> [{s,e}]
+  const presetCusts = {}   // date -> Set(customerId)
+  for (const r of presets) {
+    if (r.staff && r.start && r.end) (presetSlots[`${r.date}_${r.staff}`] = presetSlots[`${r.date}_${r.staff}`] || []).push({ s: strToMin(r.start), e: strToMin(r.end) })
+    if (r.customerId) (presetCusts[r.date] = presetCusts[r.date] || new Set()).add(r.customerId)
+  }
 
   for (let off = -3; off <= 35; off++) {
     const date = dayOffset(off)
     const d = new Date(date + 'T00:00:00')
     const wd = d.getDay() // 0=日, 1=月, 2=火, 6=土
     if (wd === 2) continue // 火曜定休
-    if (off === 0) continue // 今日は手書きreservations（handReservations）を使う
     const isWeekend = wd === 0 || wd === 6
 
     // 各スタッフの1枠ごとに予約が入る確率（枠ベース）。土日は混雑、平日は控えめ。
-    const prob = isWeekend ? 0.78 : 0.32
-    const usedCustomerIds = new Set() // 同日に同じ顧客を重複させない
+    const prob = isWeekend ? 0.82 : 0.36
+    const usedCustomerIds = new Set(presetCusts[date] || []) // 同日に同じ顧客を重複させない
 
     for (const staff of STAFF) {
       if ((SAMPLE_STAFF_OFF[staff] || []).includes(date)) continue
 
+      const occupied = [...(presetSlots[`${date}_${staff}`] || [])] // 当日の手書き予約を占有枠に
       let startMin = OPEN_MIN
       let slotIdx = 0
       while (startMin <= CLOSE_MIN - 45) {
+        // 既存予約に重なる時間帯ならその後ろ（30分刻み）へ
+        const within = occupied.find((o) => startMin >= o.s && startMin < o.e)
+        if (within) { startMin = Math.ceil(within.e / 30) * 30; continue }
+
         if (rnd() < prob) {
-          // 予約主とメニューを先に決める
-          let customerId = null, customer = '', menu = '', source = 'line'
-          if (rnd() < 0.65) {
+          // 予約主とメニュー・経路を決める
+          let customerId = null, customer = '', menu = '', source = ''
+          const isNew = rnd() < NEW_CUSTOMER_RATIO
+          if (!isNew) {
+            // リピーター（登録済み顧客）
             let c = null
             for (let t = 0; t < 10; t++) {
               const cand = pick(registered)
@@ -456,21 +478,23 @@ function genReservations(registered) {
             }
             if (c) {
               customerId = c.id; customer = c.name; menu = c.lastMenu || 'カット'
-              source = c.integrations.line === '連携済' && rnd() < 0.7 ? 'line' : (rnd() < 0.5 ? 'hotpepper' : 'phone')
+              source = repeatSource(c)
               usedCustomerIds.add(c.id)
             } else {
-              source = 'phone'; customer = `${pick(SEI)[0]} さん（電話）`; menu = pick(WALKIN_MENUS)
+              customer = `${pick(SEI)[0]} さん（電話）`; menu = pick(NEW_MENUS); source = 'phone'
             }
           } else {
-            source = rnd() < 0.6 ? 'phone' : 'walkin'
-            customer = `${pick(SEI)[0]} さん（${source === 'phone' ? '電話' : '来店'}）`
-            menu = pick(WALKIN_MENUS)
+            // 新規客：HPB（中心）または来店から
+            source = rnd() < 0.7 ? 'hotpepper' : 'walkin'
+            customer = `${pick(SEI)[0]} さん（新規）`
+            menu = pick(NEW_MENUS)
           }
           // メニューに応じた所要時間で枠を確保。閉店までに終わらなければ後ろの枠を試す。
           const dur = menuDuration(menu)
-          if (startMin + dur > CLOSE_MIN) { startMin += 30; continue }
           const endMin = startMin + dur
+          if (endMin > CLOSE_MIN || occupied.some((o) => startMin < o.e && endMin > o.s)) { startMin += 30; continue }
           out.push({ id: `gr${off}_${staff}_${slotIdx++}`, date, customerId, customer, staff, start: minToStr(startMin), end: minToStr(endMin), menu, source })
+          occupied.push({ s: startMin, e: endMin })
           // 次の枠：施術終了後、30分刻みに丸める（たまに小休憩を挟む）
           const gap = rnd() < 0.3 ? 30 : 0
           startMin = Math.ceil((endMin + gap) / 30) * 30
@@ -555,12 +579,13 @@ function genCycleReservations(registered, existingReservations) {
     const slot = findSlot(iso, staff, menu)
     if (!slot) continue
 
-    const source = c.integrations?.line === '連携済' ? 'line' : (rndStaff() < 0.5 ? 'phone' : 'hotpepper')
+    // 周期予約はすべてリピーター。HPBは使わず LINE/電話 に誘導。
+    const source = c.integrations?.line === '連携済' ? (rndStaff() < 0.85 ? 'line' : 'phone') : 'phone'
     out.push({ id, date: iso, customerId: c.id, customer: c.name, staff, start: slot.start, end: slot.end, menu, source })
   }
   return out
 }
 
-const baseReservations = [...handReservations, ...genReservations(sampleCustomers)]
+const baseReservations = [...handReservations, ...genReservations(sampleCustomers, handReservations)]
 const cycleReservations = genCycleReservations(sampleCustomers, baseReservations)
 export const sampleReservations = [...baseReservations, ...cycleReservations]
