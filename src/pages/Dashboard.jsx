@@ -165,6 +165,25 @@ export default function Dashboard() {
             )}
           </div>
 
+          {m.birthdayCustomers.length > 0 && (
+            <div className="card section">
+              <h3>🎂 今月お誕生日のお客様（{m.birthdayCustomers.length}名）</h3>
+              <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>バースデークーポンやメッセージを送るチャンスです！</p>
+              {m.birthdayCustomers.map((c) => (
+                <div key={c.id} className="target-row" onClick={() => nav('/customer/' + c.id)}>
+                  <div>
+                    <div className="tname">{c.name}</div>
+                    <div className="tsub">{c.birthday?.slice(5).replace('-', '/')} 生まれ / 来店 {c.visitCount}回</div>
+                  </div>
+                  <span className="tcta">カルテ →</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT */}
+        <div>
           <div className="card section">
             <h3>📅 本日の予約（{m.todayRes}件）</h3>
             {m.todayResList.length === 0 ? (
@@ -188,25 +207,6 @@ export default function Dashboard() {
             <Link className="link-btn" to="/timetable" style={{ marginTop: 10, display: 'inline-block' }}>予約タイムテーブルへ →</Link>
           </div>
 
-          {m.birthdayCustomers.length > 0 && (
-            <div className="card section">
-              <h3>🎂 今月お誕生日のお客様（{m.birthdayCustomers.length}名）</h3>
-              <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>バースデークーポンやメッセージを送るチャンスです！</p>
-              {m.birthdayCustomers.map((c) => (
-                <div key={c.id} className="target-row" onClick={() => nav('/customer/' + c.id)}>
-                  <div>
-                    <div className="tname">{c.name}</div>
-                    <div className="tsub">{c.birthday?.slice(5).replace('-', '/')} 生まれ / 来店 {c.visitCount}回</div>
-                  </div>
-                  <span className="tcta">カルテ →</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT */}
-        <div>
           <div className="card section">
             <h3>👥 顧客ステータス内訳</h3>
             {Object.entries(settings.statuses).map(([k, meta]) => (
