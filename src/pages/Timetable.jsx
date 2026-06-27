@@ -18,6 +18,7 @@ const toMin = (t) => {
 const minToStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 const toY = (min) => ((min - START * 60) / 60) * ROW_H
 
+const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const shiftDate = (iso, n) => {
   const d = new Date(iso + 'T00:00:00')
   d.setDate(d.getDate() + n)
@@ -60,7 +61,7 @@ export default function Timetable() {
   const STAFF = settings.staff
   const nav = useNavigate()
   const [date, setDate] = useState(TODAY_ISO)
-  const [viewMode, setViewMode] = useState('week') // 'day' | 'week'
+  const [viewMode, setViewMode] = useState('month') // 'day' | 'month'
   const [editing, setEditing] = useState(null) // 編集中のフォーム or null
   const [drag, setDrag] = useState(null) // { id, deltaMin } ドラッグ中の表示用
   const [now, setNow] = useState(new Date())
@@ -119,36 +120,38 @@ export default function Timetable() {
     setDrag(null)
   }
 
-  const wStart = weekStart(date)
-  const wDays = weekDays(wStart)
+  const monthYear = date.slice(0, 7) // 'YYYY-MM'
 
   return (
     <div>
       <div className="page-head">
         <div>
           <h1>予約タイムテーブル</h1>
-          <p>{viewMode === 'week' ? '週間ビュー：1週間の予約を一覧' : '日次ビュー：縦軸：時間 × 横軸：スタッフ'}</p>
+          <p>{viewMode === 'month' ? '月次ビュー：月全体の予約を俯瞰' : '日次ビュー：縦軸：時間 × 横軸：スタッフ'}</p>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button className={'btn ghost' + (viewMode === 'week' ? ' active' : '')} onClick={() => setViewMode('week')} style={{ fontWeight: viewMode === 'week' ? 700 : 400 }}>週間</button>
+          <button className={'btn ghost' + (viewMode === 'month' ? ' active' : '')} onClick={() => setViewMode('month')} style={{ fontWeight: viewMode === 'month' ? 700 : 400 }}>月次</button>
           <button className={'btn ghost' + (viewMode === 'day' ? ' active' : '')} onClick={() => setViewMode('day')} style={{ fontWeight: viewMode === 'day' ? 700 : 400 }}>日次</button>
           <button className="btn" onClick={() => openAdd()}>＋ 予約を追加</button>
         </div>
       </div>
 
-      {viewMode === 'week' ? (
-        <WeekView
-          days={wDays}
+      {viewMode === 'month' ? (
+        <MonthView
+          monthYear={monthYear}
           reservations={reservations}
           settings={settings}
           today={TODAY_ISO}
           onSelectDay={(d) => { setDate(d); setViewMode('day') }}
-          onAddRes={(d) => { setDate(d); setEditing(blank(d, STAFF[0], '10:00')) }}
-          onEditRes={(r) => { setDate(r.date); setEditing({ ...r }) }}
-          srcMeta={RES_SOURCE_META}
-          onPrevWeek={() => setDate(shiftDate(wStart, -7))}
-          onNextWeek={() => setDate(shiftDate(wStart, 7))}
-          onToday={() => setDate(TODAY_ISO)}
+          onPrevMonth={() => {
+            const d = new Date(date + 'T00:00:00'); d.setMonth(d.getMonth() - 1)
+            setDate(fmt(d))
+          }}
+          onNextMonth={() => {
+            const d = new Date(date + 'T00:00:00'); d.setMonth(d.getMonth() + 1)
+            setDate(fmt(d))
+          }}
+          onToday={() => { setDate(TODAY_ISO); setViewMode('day') }}
         />
       ) : (
       <>
@@ -399,6 +402,89 @@ function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, on
           <button className="btn" onClick={save}>保存</button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function MonthView({ monthYear, reservations, settings, today, onSelectDay, onPrevMonth, onNextMonth, onToday }) {
+  const [y, m] = monthYear.split('-').map(Number)
+  const firstDay = new Date(y, m - 1, 1)
+  const lastDay = new Date(y, m, 0)
+  // グリッド先頭を月曜に合わせる
+  const startOffset = (firstDay.getDay() + 6) % 7 // 0=Mon
+  const totalCells = Math.ceil((startOffset + lastDay.getDate()) / 7) * 7
+  const cells = []
+  for (let i = 0; i < totalCells; i++) {
+    const dayNum = i - startOffset + 1
+    if (dayNum < 1 || dayNum > lastDay.getDate()) { cells.push(null); continue }
+    const iso = `${y}-${String(m).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`
+    const dayRes = reservations.filter(r => r.date === iso && !r.cancelled)
+    const closed = shopClosedReason(settings, iso)
+    cells.push({ iso, dayNum, count: dayRes.length, closed, isToday: iso === today })
+  }
+
+  const prevMonthLabel = (() => { const d = new Date(y, m - 2, 1); return `${d.getFullYear()}/${d.getMonth()+1}` })()
+  const nextMonthLabel = (() => { const d = new Date(y, m, 1); return `${d.getFullYear()}/${d.getMonth()+1}` })()
+
+  // 件数の最大値（色の濃さ計算用）
+  const maxCount = Math.max(1, ...cells.filter(Boolean).map(c => c.count))
+
+  return (
+    <div>
+      <div className="tt-datebar" style={{ justifyContent: 'space-between' }}>
+        <button className="datenav" onClick={onPrevMonth}>‹ {prevMonthLabel}</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontWeight: 700, fontSize: 16 }}>{y}年{m}月</span>
+          {today.slice(0, 7) !== monthYear && (
+            <button className="datenav today" onClick={onToday}>今日へ</button>
+          )}
+        </div>
+        <button className="datenav" onClick={onNextMonth}>{nextMonthLabel} ›</button>
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <div style={{ minWidth: 560 }}>
+          {/* 曜日ヘッダー */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', borderBottom: '2px solid var(--line)', marginBottom: 0 }}>
+            {['月','火','水','木','金','土','日'].map((wd, i) => (
+              <div key={wd} style={{ textAlign: 'center', padding: '6px 0', fontSize: 12, fontWeight: 700, color: i === 6 ? '#e53935' : i === 5 ? '#1565c0' : 'var(--muted)', background: 'var(--bg)' }}>{wd}</div>
+            ))}
+          </div>
+          {/* 日付グリッド */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+            {cells.map((cell, i) => {
+              const wd = i % 7
+              if (!cell) return <div key={i} style={{ minHeight: 80, borderRight: '1px solid var(--line)', borderBottom: '1px solid var(--line)', background: '#fafafa' }} />
+              const { iso, dayNum, count, closed, isToday } = cell
+              const intensity = closed ? 0 : Math.round((count / maxCount) * 100)
+              const bg = isToday ? '#e8f5e9' : closed ? '#f5f5f5' : count === 0 ? 'var(--surface)' : `rgba(6,199,85,${(intensity / 100) * 0.18})`
+              return (
+                <div
+                  key={iso}
+                  onClick={() => !closed && onSelectDay(iso)}
+                  style={{ minHeight: 80, borderRight: '1px solid var(--line)', borderBottom: '1px solid var(--line)', padding: '6px 8px', cursor: closed ? 'default' : 'pointer', background: bg, position: 'relative', transition: 'background 0.1s' }}
+                >
+                  <div style={{ fontWeight: isToday ? 800 : 600, fontSize: 13, color: isToday ? '#2c5e3c' : wd === 6 ? '#e53935' : wd === 5 ? '#1565c0' : '#333', marginBottom: 4 }}>
+                    {dayNum}
+                    {isToday && <span style={{ marginLeft: 4, fontSize: 10, background: '#2c5e3c', color: '#fff', borderRadius: 4, padding: '1px 4px' }}>今日</span>}
+                  </div>
+                  {closed ? (
+                    <div style={{ fontSize: 11, color: '#bbb' }}>休</div>
+                  ) : count > 0 ? (
+                    <>
+                      <div style={{ fontSize: 18, fontWeight: 800, color: '#2c5e3c', lineHeight: 1 }}>{count}</div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>件</div>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 11, color: '#ccc' }}>0件</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+      <p style={{ fontSize: 12, color: 'var(--muted)', margin: '8px 0 0' }}>日付をクリックするとその日の日次ビューへ移動します</p>
     </div>
   )
 }
