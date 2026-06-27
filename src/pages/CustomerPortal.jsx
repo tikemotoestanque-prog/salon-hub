@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import BookingForm from '../components/BookingForm.jsx'
-import { daysSince, TODAY, TODAY_ISO } from '../utils.js'
+import { daysSince, TODAY, TODAY_ISO, MILESTONE_COUPONS } from '../utils.js'
 
 export default function CustomerPortal() {
   const { id } = useParams()
@@ -100,15 +100,6 @@ function BookTab({ c, reservations }) {
     </div>
   )
 }
-
-// 10回ごとのマイルストーンクーポン定義
-const MILESTONE_COUPONS = [
-  { t: 'カット 10%OFF', s: '10回来店達成おめでとうございます！', emoji: '🎉' },
-  { t: 'トリートメント 無料', s: '20回来店達成！いつもありがとうございます✨', emoji: '✨' },
-  { t: 'カット＋カラー 15%OFF', s: '30回来店達成！本当にありがとうございます💎', emoji: '💎' },
-  { t: 'カット 10%OFF', s: '40回来店達成！ありがとうございます🎉', emoji: '🎉' },
-  { t: 'VIP限定メニュー 無料', s: '50回来店達成！あなたは特別なお客様です👑', emoji: '👑' },
-]
 
 function Card({ c, rank }) {
   const visitCount = c.visitCount || 0

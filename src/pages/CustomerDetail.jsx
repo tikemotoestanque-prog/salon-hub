@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { StatusBadge, SourceBadge } from '../components/Badges.jsx'
 import { G_REVIEW_META } from '../data/sampleData.js'
-import { initials, daysSince, yen, gReview, TODAY_ISO } from '../utils.js'
+import { initials, daysSince, yen, gReview, TODAY_ISO, stampStatus } from '../utils.js'
 
 const STEP_CLASS = { '配信済': 's-done', '予約': 's-sched', '未配信': 's-none', '未対応': 's-todo', '未送信': 's-none' }
 
@@ -24,6 +24,12 @@ export default function CustomerDetail() {
 
   const d = daysSince(c.lastVisit)
   const last10 = c.history.slice(0, 10)
+
+  // スタンプ・マイルストーン状況（お客様画面と同じロジック）
+  let usedKeys = []
+  try { usedKeys = JSON.parse(localStorage.getItem(`used_coupons_${c.id}`) || '[]') } catch { usedKeys = [] }
+  const stamp = stampStatus(c, usedKeys)
+  const availableCoupons = stamp.earned.filter((e) => !e.used)
 
   const gStatus = gReview(c.integrations?.google)
   const gMeta = G_REVIEW_META[gStatus]
@@ -142,6 +148,43 @@ export default function CustomerDetail() {
 
         {/* RIGHT */}
         <div>
+          <div className="card section">
+            <h3>⭐ スタンプ＆特典</h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+              <span style={{ fontSize: 13, color: 'var(--muted)' }}>累計 <b style={{ color: 'var(--text, #333)', fontSize: 15 }}>{stamp.visitCount}</b> 回来店</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>あと {stamp.nextMilestone - stamp.visitCount} 回で次の特典</span>
+            </div>
+            <div className="cp-stamps">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <span key={i} className={'cp-stamp' + (i < stamp.currentStamps ? ' on' : '')}>{i < stamp.currentStamps ? '★' : i + 1}</span>
+              ))}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>
+              次の特典（{stamp.nextMilestone}回）→「{stamp.nextCoupon.t}」
+            </div>
+
+            <div style={{ borderTop: '1px solid #eee', marginTop: 12, paddingTop: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
+                解放済みクーポン
+                <span style={{ fontWeight: 400, color: 'var(--muted)', marginLeft: 6 }}>利用可 {availableCoupons.length} / 全 {stamp.earned.length} 枚</span>
+              </div>
+              {stamp.earned.length === 0 ? (
+                <div style={{ color: 'var(--muted)', fontSize: 13 }}>まだ特典はありません（10回来店で解放）</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {stamp.earned.map((e) => (
+                    <div key={e.tag} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, opacity: e.used ? 0.5 : 1 }}>
+                      <span className="pill">{e.cycleNum * 10}回</span>
+                      <span style={{ flex: 1, textDecoration: e.used ? 'line-through' : 'none' }}>{e.emoji} {e.t}</span>
+                      <span className={'step-status ' + (e.used ? 's-done' : 's-sched')}>{e.used ? '使用済み' : '利用可'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 8 }}>※ お客様画面で「使用済み」にすると反映されます</div>
+            </div>
+          </div>
+
           <div className="card section">
             <h3>🔗 外部連携</h3>
             <dl className="kv">

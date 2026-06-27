@@ -89,6 +89,31 @@ export function workingStaff(settings, staffList, iso) {
   return staffList.filter((s) => !isStaffOff(settings, s, iso))
 }
 
+// 10回ごとのマイルストーンクーポン定義（お客様画面とスタッフ画面で共用）
+export const MILESTONE_COUPONS = [
+  { t: 'カット 10%OFF', s: '10回来店達成おめでとうございます！', emoji: '🎉' },
+  { t: 'トリートメント 無料', s: '20回来店達成！いつもありがとうございます✨', emoji: '✨' },
+  { t: 'カット＋カラー 15%OFF', s: '30回来店達成！本当にありがとうございます💎', emoji: '💎' },
+  { t: 'カット 10%OFF', s: '40回来店達成！ありがとうございます🎉', emoji: '🎉' },
+  { t: 'VIP限定メニュー 無料', s: '50回来店達成！あなたは特別なお客様です👑', emoji: '👑' },
+]
+
+// 顧客の来店回数からスタンプ・マイルストーン状況を算出
+// usedKeys: お客様画面で「使用済み」にしたクーポンのtag配列（同一ブラウザのlocalStorageから取得可能）
+export function stampStatus(c, usedKeys = []) {
+  const visitCount = c.visitCount || 0
+  const currentStamps = visitCount % 10
+  const completedCycles = Math.floor(visitCount / 10)
+  const nextMilestone = (completedCycles + 1) * 10
+  const earned = []
+  for (let i = 0; i < completedCycles; i++) {
+    const def = MILESTONE_COUPONS[Math.min(i, MILESTONE_COUPONS.length - 1)]
+    earned.push({ tag: `cycle_${i + 1}`, cycleNum: i + 1, used: usedKeys.includes(`cycle_${i + 1}`), ...def })
+  }
+  const nextCoupon = MILESTONE_COUPONS[Math.min(completedCycles, MILESTONE_COUPONS.length - 1)]
+  return { visitCount, currentStamps, completedCycles, nextMilestone, earned, nextCoupon }
+}
+
 // 来店回数・累計・最終来店日からステータスを自動判定（設定の閾値を使う）
 export function computeStatus(c, th) {
   const days = daysSince(c.lastVisit)
