@@ -45,11 +45,22 @@ const blank = (date, staff, start) => ({
   source: 'phone',
 })
 
+// 週の月曜日を返す
+const weekStart = (iso) => {
+  const d = new Date(iso + 'T00:00:00')
+  const day = d.getDay()
+  const diff = day === 0 ? -6 : 1 - day
+  d.setDate(d.getDate() + diff)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+const weekDays = (startIso) => Array.from({ length: 7 }, (_, i) => shiftDate(startIso, i))
+
 export default function Timetable() {
   const { reservations, customers, settings, addReservation, updateReservation, deleteReservation, cancelReservation } = useStore()
   const STAFF = settings.staff
   const nav = useNavigate()
   const [date, setDate] = useState(TODAY_ISO)
+  const [viewMode, setViewMode] = useState('week') // 'day' | 'week'
   const [editing, setEditing] = useState(null) // 編集中のフォーム or null
   const [drag, setDrag] = useState(null) // { id, deltaMin } ドラッグ中の表示用
   const [now, setNow] = useState(new Date())
@@ -108,16 +119,39 @@ export default function Timetable() {
     setDrag(null)
   }
 
+  const wStart = weekStart(date)
+  const wDays = weekDays(wStart)
+
   return (
     <div>
       <div className="page-head">
         <div>
           <h1>予約タイムテーブル</h1>
-          <p>縦軸：時間 × 横軸：スタッフ / 日付を切り替えて先・前の予約も確認できます</p>
+          <p>{viewMode === 'week' ? '週間ビュー：1週間の予約を一覧' : '日次ビュー：縦軸：時間 × 横軸：スタッフ'}</p>
         </div>
-        <button className="btn" onClick={() => openAdd()}>＋ 予約を追加</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button className={'btn ghost' + (viewMode === 'week' ? ' active' : '')} onClick={() => setViewMode('week')} style={{ fontWeight: viewMode === 'week' ? 700 : 400 }}>週間</button>
+          <button className={'btn ghost' + (viewMode === 'day' ? ' active' : '')} onClick={() => setViewMode('day')} style={{ fontWeight: viewMode === 'day' ? 700 : 400 }}>日次</button>
+          <button className="btn" onClick={() => openAdd()}>＋ 予約を追加</button>
+        </div>
       </div>
 
+      {viewMode === 'week' ? (
+        <WeekView
+          days={wDays}
+          reservations={reservations}
+          settings={settings}
+          today={TODAY_ISO}
+          onSelectDay={(d) => { setDate(d); setViewMode('day') }}
+          onAddRes={(d) => { setDate(d); setEditing(blank(d, STAFF[0], '10:00')) }}
+          onEditRes={(r) => { setDate(r.date); setEditing({ ...r }) }}
+          srcMeta={RES_SOURCE_META}
+          onPrevWeek={() => setDate(shiftDate(wStart, -7))}
+          onNextWeek={() => setDate(shiftDate(wStart, 7))}
+          onToday={() => setDate(TODAY_ISO)}
+        />
+      ) : (
+      <>
       <div className="tt-datebar">
         <button className="datenav" onClick={() => setDate(shiftDate(date, -1))}>‹ 前日</button>
         <label className="datecur">
@@ -203,6 +237,9 @@ export default function Timetable() {
           </div>
         </div>
       </div>
+
+      </>
+      )}
 
       {editing && (
         <ResModal
@@ -360,6 +397,71 @@ function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, on
           <span style={{ flex: 1 }} />
           <button className="btn ghost" onClick={onClose}>閉じる</button>
           <button className="btn" onClick={save}>保存</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function WeekView({ days, reservations, settings, today, onSelectDay, onAddRes, onEditRes, srcMeta, onPrevWeek, onNextWeek, onToday }) {
+  const hours = [9,10,11,12,13,14,15,16,17,18,19,20]
+  const ROW = 48
+
+  return (
+    <div>
+      <div className="tt-datebar" style={{ justifyContent: 'space-between' }}>
+        <button className="datenav" onClick={onPrevWeek}>‹ 前の週</button>
+        <span style={{ fontWeight: 700, fontSize: 15 }}>
+          {days[0].slice(5).replace('-','/')} 〜 {days[6].slice(5).replace('-','/')}
+        </span>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {!days.includes(today) && <button className="datenav today" onClick={onToday}>今週へ</button>}
+          <button className="datenav" onClick={onNextWeek}>次の週 ›</button>
+        </div>
+      </div>
+
+      <div style={{ overflowX: 'auto' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `52px repeat(7, 1fr)`, minWidth: 640, borderTop: '1px solid var(--line)' }}>
+          {/* ヘッダー */}
+          <div style={{ borderBottom: '2px solid var(--line)', background: 'var(--bg)' }} />
+          {days.map((d) => {
+            const isToday = d === today
+            const dayRes = reservations.filter((r) => r.date === d && !r.cancelled)
+            const closed = shopClosedReason(settings, d)
+            const wd = WD[new Date(d + 'T00:00:00').getDay()]
+            return (
+              <div key={d} onClick={() => onSelectDay(d)} style={{ padding: '6px 4px', textAlign: 'center', borderLeft: '1px solid var(--line)', borderBottom: '2px solid var(--line)', cursor: 'pointer', background: isToday ? '#e8f5e9' : closed ? '#fafafa' : 'var(--bg)' }}>
+                <div style={{ fontSize: 11, color: isToday ? '#2c5e3c' : 'var(--muted)' }}>{d.slice(5).replace('-','/')}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: isToday ? '#2c5e3c' : closed ? 'var(--muted)' : undefined }}>{wd}</div>
+                <div style={{ fontSize: 11, marginTop: 2 }}>
+                  {closed ? <span style={{ color: 'var(--muted)' }}>休</span> : <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{dayRes.length}件</span>}
+                </div>
+              </div>
+            )
+          })}
+
+          {/* 時間 × 日 グリッド */}
+          {hours.map((h) => (
+            <>
+              <div key={'t'+h} style={{ height: ROW, borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-end', paddingRight: 6, paddingTop: 2, fontSize: 11, color: 'var(--muted)', background: 'var(--bg)' }}>{h}:00</div>
+              {days.map((d) => {
+                const closed = shopClosedReason(settings, d)
+                const slot = reservations.filter((r) => r.date === d && !r.cancelled && r.start.startsWith(`${String(h).padStart(2,'0')}`))
+                return (
+                  <div key={d+h} onClick={() => !closed && onAddRes(d)} style={{ height: ROW, borderLeft: '1px solid var(--line)', borderBottom: '1px solid var(--line)', padding: '2px 3px', cursor: closed ? 'default' : 'pointer', background: closed ? '#f9f9f9' : undefined, position: 'relative' }}>
+                    {slot.map((r) => {
+                      const meta = srcMeta[r.source] || srcMeta.other
+                      return (
+                        <div key={r.id} onClick={(e) => { e.stopPropagation(); onEditRes(r) }} style={{ background: meta.bg, borderLeft: `3px solid ${meta.bar}`, borderRadius: 3, padding: '1px 4px', marginBottom: 2, fontSize: 11, cursor: 'pointer', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                          {r.start} {r.customer}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )
+              })}
+            </>
+          ))}
         </div>
       </div>
     </div>

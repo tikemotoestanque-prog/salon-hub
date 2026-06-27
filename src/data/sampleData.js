@@ -248,24 +248,27 @@ const handCustomers = [
   },
 ]
 
-// 基準日(2026-06-24)の予約は手書きのまま使う（カリキュレーション生成は他の日に足す）
+// 基準日はTODAYから計算（常にリアルな日付になる）
+const TODAY_BASE = new Date()
+TODAY_BASE.setHours(0,0,0,0)
+const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+const dayOffset = (n) => { const d = new Date(TODAY_BASE); d.setDate(d.getDate() + n); return fmt(d) }
+const TODAY_STR = dayOffset(0)
+
 const handReservations = [
-  { id: 'r1', date: '2026-06-24', customerId: 'c001', customer: '山田 花子', staff: '田中', start: '10:00', end: '11:30', menu: 'カット+カラー', source: 'line' },
-  { id: 'r2', date: '2026-06-24', customerId: 'c005', customer: '伊藤 大輔', staff: '田中', start: '12:00', end: '12:45', menu: 'カット', source: 'line' },
-  { id: 'r3', date: '2026-06-24', customerId: 'c003', customer: '鈴木 美咲', staff: '鈴木', start: '10:30', end: '12:30', menu: 'ブリーチ+カラー', source: 'line' },
-  { id: 'r4', date: '2026-06-24', customerId: 'c002', customer: '佐々木 健一', staff: '佐藤', start: '18:00', end: '19:00', menu: 'カット+パーマ', source: 'phone' },
-  { id: 'r5', date: '2026-06-24', customerId: 'c004', customer: '高橋 由美', staff: '高橋', start: '13:00', end: '14:00', menu: '白髪染め+スパ', source: 'phone' },
-  { id: 'r6', date: '2026-06-24', customerId: null, customer: '田村 さん（電話）', staff: '佐藤', start: '11:00', end: '12:00', menu: 'カット', source: 'phone' },
-  { id: 'r7', date: '2026-06-24', customerId: null, customer: '飛び込み', staff: '鈴木', start: '15:00', end: '15:30', menu: '前髪カット', source: 'walkin' },
+  { id: 'r1', date: TODAY_STR, customerId: 'c001', customer: '山田 花子', staff: '田中', start: '10:00', end: '11:30', menu: 'カット+カラー', source: 'line' },
+  { id: 'r2', date: TODAY_STR, customerId: 'c005', customer: '伊藤 大輔', staff: '田中', start: '12:00', end: '12:45', menu: 'カット', source: 'line' },
+  { id: 'r3', date: TODAY_STR, customerId: 'c003', customer: '鈴木 美咲', staff: '鈴木', start: '10:30', end: '12:30', menu: 'ブリーチ+カラー', source: 'line' },
+  { id: 'r4', date: TODAY_STR, customerId: 'c002', customer: '佐々木 健一', staff: '佐藤', start: '18:00', end: '19:00', menu: 'カット+パーマ', source: 'phone' },
+  { id: 'r5', date: TODAY_STR, customerId: 'c004', customer: '高橋 由美', staff: '高橋', start: '13:00', end: '14:00', menu: '白髪染め+スパ', source: 'phone' },
+  { id: 'r6', date: TODAY_STR, customerId: null, customer: '田村 さん（電話）', staff: '佐藤', start: '11:00', end: '12:00', menu: 'カット', source: 'phone' },
+  { id: 'r7', date: TODAY_STR, customerId: null, customer: '飛び込み', staff: '鈴木', start: '15:00', end: '15:30', menu: '前髪カット', source: 'walkin' },
 ]
 
 // ============================================================
-// ここから下：デモを“100名規模・複数日”に見せるための自動生成データ
+// ここから下：デモを”100名規模・複数日”に見せるための自動生成データ
 // 乱数は固定シードなので、誰が見ても毎回同じ内容になる（再現性あり）
 // ============================================================
-const BASE = new Date('2026-06-24T00:00:00')
-const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-const dayOffset = (n) => { const d = new Date(BASE); d.setDate(d.getDate() + n); return fmt(d) }
 const minToStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 
 function mulberry32(seed) {
