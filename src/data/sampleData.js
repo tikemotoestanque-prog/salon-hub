@@ -498,8 +498,11 @@ function genCycleReservations(registered, existingReservations) {
     ;(usedSlots[k] = usedSlots[k] || []).push({ s, e })
   }
   // 既存（通常）予約の枠を先に埋めて、周期予約が重ならないようにする
+  // あわせて「日付×顧客」を記録し、同じ客を同日に二重で入れない
+  const usedCustomerDays = new Set()
   for (const r of existingReservations) {
     if (r.staff && r.start && r.end) addSlot(r.date, r.staff, strToMin(r.start), strToMin(r.end))
+    if (r.customerId) usedCustomerDays.add(`${r.date}_${r.customerId}`)
   }
   const findSlot = (date, staff, menu) => {
     const k = `${date}_${staff}`
@@ -536,6 +539,9 @@ function genCycleReservations(registered, existingReservations) {
     const iso = fmt(nextDate)
     const daysAhead = Math.round((nextDate - TODAY_BASE) / 86400000)
     if (daysAhead <= 0 || daysAhead > 35) continue
+    // 同じ客が同日に通常予約済みなら入れない
+    if (usedCustomerDays.has(`${iso}_${c.id}`)) continue
+    usedCustomerDays.add(`${iso}_${c.id}`)
 
     // スタッフ休みならスキップ
     const staff = c.assignedStaff || pick(STAFF)
