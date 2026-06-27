@@ -404,7 +404,7 @@ function genReservations(registered) {
   const out = []
   const durPool = [45, 60, 60, 90, 30]
 
-  for (let off = -3; off <= 10; off++) {
+  for (let off = -3; off <= 35; off++) {
     const date = dayOffset(off)
     const d = new Date(date + 'T00:00:00')
     const wd = d.getDay() // 0=日, 1=月, 2=火, 6=土
@@ -464,4 +464,71 @@ function genReservations(registered) {
   return out
 }
 
-export const sampleReservations = [...handReservations, ...genReservations(sampleCustomers)]
+// 顧客の来店周期から将来予約を自動生成（2〜5週間先）
+const PATTERN_DAYS = {
+  '約4週間ごと': 28, '約5週間ごと': 35, '約6週間ごと': 42,
+  '約2ヶ月ごと': 60, '約3ヶ月ごと・不定期': 85,
+}
+
+function genCycleReservations(registered, existingIds) {
+  const out = []
+  // 日×スタッフ別の使用済み時間帯
+  const usedSlots = {}
+  const addSlot = (date, staff, s, e) => {
+    const k = `${date}_${staff}`
+    ;(usedSlots[k] = usedSlots[k] || []).push({ s, e })
+  }
+  const findSlot = (date, staff) => {
+    const k = `${date}_${staff}`
+    const used = usedSlots[k] || []
+    const starts = [9,9,10,10,11,13,14,15,16,17].map(h => h * 60 + (rndStaff() < 0.5 ? 0 : 30))
+    for (const startMin of starts) {
+      const dur = [45,60,60,90,60][Math.floor(rndStaff() * 5)]
+      const endMin = Math.min(startMin + dur, 20 * 60)
+      if (!used.some(u => startMin < u.e && endMin > u.s)) {
+        addSlot(date, staff, startMin, endMin)
+        return { start: minToStr(startMin), end: minToStr(endMin) }
+      }
+    }
+    return null
+  }
+
+  const usedCycleIds = new Set(existingIds)
+
+  for (const c of registered) {
+    if (!c.lastVisit || c.status === 'dormant') continue
+    const days = PATTERN_DAYS[c.reservationPattern]
+    if (!days) continue
+
+    const nextDate = new Date(c.lastVisit + 'T00:00:00')
+    nextDate.setDate(nextDate.getDate() + days + Math.floor(rndStaff() * 5) - 2) // ±2日ゆらぎ
+
+    // 定休日（火曜）なら翌日へ
+    if (nextDate.getDay() === 2) nextDate.setDate(nextDate.getDate() + 1)
+    // 日曜なら月曜へ（好みが分かれるので一部はそのまま）
+    if (nextDate.getDay() === 0 && rndStaff() < 0.5) nextDate.setDate(nextDate.getDate() + 1)
+
+    const iso = fmt(nextDate)
+    const daysAhead = Math.round((nextDate - TODAY_BASE) / 86400000)
+    if (daysAhead <= 0 || daysAhead > 35) continue
+
+    // スタッフ休みならスキップ
+    const staff = c.assignedStaff || pick(STAFF)
+    if ((SAMPLE_STAFF_OFF[staff] || []).includes(iso)) continue
+
+    const id = `cyc_${c.id}`
+    if (usedCycleIds.has(id)) continue
+    usedCycleIds.add(id)
+
+    const slot = findSlot(iso, staff)
+    if (!slot) continue
+
+    const source = c.integrations?.line === '連携済' ? 'line' : (rndStaff() < 0.5 ? 'phone' : 'hotpepper')
+    out.push({ id, date: iso, customerId: c.id, customer: c.name, staff, start: slot.start, end: slot.end, menu: c.lastMenu || 'カット', source })
+  }
+  return out
+}
+
+const baseReservations = [...handReservations, ...genReservations(sampleCustomers)]
+const cycleReservations = genCycleReservations(sampleCustomers, new Set(baseReservations.map(r => r.id)))
+export const sampleReservations = [...baseReservations, ...cycleReservations]
