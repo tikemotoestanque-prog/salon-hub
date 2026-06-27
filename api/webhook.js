@@ -51,6 +51,31 @@ export default async function handler(req, res) {
       continue
     }
 
+    // ブロックイベント → 通知として記録
+    if (event.type === 'unfollow') {
+      const lineUserId = event.source?.userId
+      let customerId = null
+      let customerName = null
+      if (lineUserId) {
+        const { data } = await supabase
+          .from('customers')
+          .select('id, name')
+          .eq('integrations->>lineUserId', lineUserId)
+          .maybeSingle()
+        if (data) { customerId = data.id; customerName = data.name }
+      }
+      await supabase.from('notifications').insert({
+        type: 'line_block',
+        line_user_id: lineUserId,
+        customer_id: customerId,
+        customer_name: customerName,
+        message: 'LINEをブロックしました',
+        read: false,
+        created_at: new Date(event.timestamp).toISOString(),
+      })
+      continue
+    }
+
     // テキストメッセージのみ保存
     if (event.type !== 'message' || event.message?.type !== 'text') continue
 
