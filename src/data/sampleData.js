@@ -411,6 +411,7 @@ function genReservations(registered) {
     const isClosed = wd === 2 // 火曜定休
     const isWeekend = wd === 0 || wd === 6
     if (isClosed) continue
+    if (off === 0) continue // 今日は手書きreservations（handReservations）を使う
 
     // 土日は高確率（10件以上狙い）、平日は低め（5〜7件）
     const prob = isWeekend ? 0.52 : 0.20
