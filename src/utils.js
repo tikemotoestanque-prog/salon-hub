@@ -1,6 +1,6 @@
-// アプリ基準日（サンプルデータと整合）
-export const TODAY = new Date('2026-06-24T00:00:00')
-export const TODAY_ISO = '2026-06-24'
+// アプリ基準日（実行時の今日）
+export const TODAY = (() => { const d = new Date(); d.setHours(0,0,0,0); return d })()
+export const TODAY_ISO = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`
 
 // Googleクチコミの状態を正規化（旧データの値も新3段階に寄せる）
 export function gReview(v) {
