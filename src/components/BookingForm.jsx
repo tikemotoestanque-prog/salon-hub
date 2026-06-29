@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useStore } from '../store.jsx'
 import { apiFetch } from '../lib/liff.js'
-import { slotFree, TODAY_ISO, shopClosedReason, isStaffOff, workingStaff } from '../utils.js'
+import { staffFreeForMenu, TODAY_ISO, shopClosedReason, isStaffOff, workingStaff } from '../utils.js'
 
 const ALL_TIMES = ['09:00','09:30','10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00']
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
@@ -49,12 +49,12 @@ export default function BookingForm({ customer }) {
   const closedReason = shopClosedReason(settings, date)
   const staffOffToday = staff && isStaffOff(settings, staff, date)
 
-  // 選択中の日付・スタッフでの空き時間
+  // 選択中の日付・スタッフ・メニューでの空き時間（化学系の放置中は2人目OK＝メニュー連動）
   const slots = useMemo(() => {
     if (closedReason || staffOffToday) return TIMES.map((t) => ({ time: t, ok: false }))
     const candidates = staff ? [staff] : workingStaff(settings, staffList, date)
-    return TIMES.map((t) => ({ time: t, ok: candidates.some((s) => slotFree(dayRes, date, s, t, dur, capacity)) }))
-  }, [dayRes, date, staff, capacity, staffList, settings, closedReason, staffOffToday, dur, TIMES])
+    return TIMES.map((t) => ({ time: t, ok: candidates.some((s) => staffFreeForMenu(dayRes, date, s, toMin(t), menu, dur)) }))
+  }, [dayRes, date, staff, menu, staffList, settings, closedReason, staffOffToday, dur, TIMES])
 
   const anyOpen = slots.some((s) => s.ok)
 

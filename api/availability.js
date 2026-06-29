@@ -10,12 +10,13 @@ export default async function handler(req, res) {
 
   const { data, error } = await admin
     .from('reservations')
-    .select('staff,start,end,cancelled')
+    .select('staff,start,end,menu,cancelled')
     .eq('date', date)
   if (error) return res.status(500).json({ error: error.message })
 
+  // menu は拘束/放置の判定に使う（PIIではない）。氏名等は返さない。
   const reservations = (data || [])
     .filter((r) => !r.cancelled)
-    .map((r) => ({ date, staff: r.staff, start: r.start, end: r.end }))
+    .map((r) => ({ date, staff: r.staff, start: r.start, end: r.end, menu: r.menu }))
   return res.status(200).json({ reservations })
 }

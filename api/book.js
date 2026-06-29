@@ -5,9 +5,10 @@
 import { admin } from './_lib/admin.js'
 import { userIdFrom } from './_lib/liff.js'
 import { pushText } from './_lib/line.js'
-import { slotFree, pickFreeStaff, workingStaff } from '../src/utils.js'
+import { staffFreeForMenu, pickBalancedStaffForMenu, workingStaff } from '../src/utils.js'
 
-const minPlus = (t, m) => { const [h, mm] = t.split(':').map(Number); const x = h * 60 + mm + m; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}` }
+const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
+const minToStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
 const WD = ['日', '月', '火', '水', '木', '金', '土']
 const fmtDate = (iso) => { const d = new Date(iso + 'T00:00:00'); return `${d.getMonth() + 1}/${d.getDate()}（${WD[d.getDay()]}）` }
 
@@ -28,39 +29,51 @@ export default async function handler(req, res) {
   const name = cust ? cust.name : (customer || '').trim()
   if (!name) return res.status(400).json({ error: 'name required' })
 
-  // 設定とその日の予約を取得して空き枠を再検証
+  // 設定とその日の予約を取得（メニューも取得＝拘束/放置の判定に使う）
   const [{ data: setRow }, { data: dayRows }] = await Promise.all([
     admin.from('settings').select('data').eq('id', 1).maybeSingle(),
-    admin.from('reservations').select('staff,start,end,date,cancelled').eq('date', date),
+    admin.from('reservations').select('staff,start,end,date,menu,cancelled').eq('date', date),
   ])
   const settings = (setRow && setRow.data) || {}
   const staffList = settings.staff || []
-  const capacity = settings.capacity || {}
   const dur = (settings.menuDurations && settings.menuDurations[menu]) || 60
   const dayRes = (dayRows || []).filter((r) => !r.cancelled)
+  const closeMin = toMin(settings.closeTime || '19:00')
+  const working = workingStaff(settings, staffList, date)
 
-  const assigned = staff || pickFreeStaff(dayRes, date, time, dur, capacity, workingStaff(settings, staffList, date))
-  if (!assigned || !slotFree(dayRes, date, assigned, time, dur, capacity)) {
-    return res.status(409).json({ ok: false, error: 'full' })
+  // 希望時間から30分ずつ後ろにずらして、メニューを受けられる枠を探す。
+  // ・指名：そのスタッフの拘束が空く時間を探す（放置中なら2人目OK）
+  // ・おまかせ：受けられる出勤スタッフのうち担当件数が最少の人へ（負荷分散）
+  let assigned = null, startMin = null
+  for (let t = toMin(time); t + dur <= closeMin; t += 30) {
+    if (staff) {
+      if (working.includes(staff) && staffFreeForMenu(dayRes, date, staff, t, menu, dur)) { assigned = staff; startMin = t; break }
+    } else {
+      const pick = pickBalancedStaffForMenu(dayRes, date, t, menu, dur, working)
+      if (pick) { assigned = pick; startMin = t; break }
+    }
   }
+  if (assigned == null) return res.status(409).json({ ok: false, error: 'full' })
+  const startStr = minToStr(startMin)
+  const endStr = minToStr(startMin + dur)
 
   const id = 'r' + String(Date.now()).slice(-6)
-  const newRes = { id, date, customer_id: customerId || null, customer: name, staff: assigned, start: time, end: minPlus(time, dur), menu, source: 'line' }
+  const newRes = { id, date, customer_id: customerId || null, customer: name, staff: assigned, start: startStr, end: endStr, menu, source: 'line' }
   const { error } = await admin.from('reservations').insert(newRes)
   if (error) return res.status(500).json({ error: error.message })
 
   // ダッシュボード通知
   await admin.from('notifications').insert({
     type: 'reservation', customer_id: customerId || null, customer_name: name,
-    message: `${date} ${time}〜 ${menu} / 担当：${assigned}`,
+    message: `${date} ${startStr}〜 ${menu} / 担当：${assigned}`,
     read: false, created_at: new Date().toISOString(),
   })
 
   // 本人のLINEへ自動送信
   const lineUserId = cust && (cust.integrations || {}).lineUserId
   if (lineUserId) {
-    await pushText(lineUserId, `${name}様、ご予約ありがとうございます！✂️\n\n📅 ${fmtDate(date)} ${time}〜\n💇 ${menu}\n👤 担当：${assigned}\n\nご来店をお待ちしております🌿`)
+    await pushText(lineUserId, `${name}様、ご予約ありがとうございます！✂️\n\n📅 ${fmtDate(date)} ${startStr}〜\n💇 ${menu}\n👤 担当：${assigned}\n\nご来店をお待ちしております🌿`)
   }
 
-  return res.status(200).json({ ok: true, reservation: { id, date, time, staff: assigned, menu, end: minPlus(time, dur) } })
+  return res.status(200).json({ ok: true, reservation: { id, date, time: startStr, staff: assigned, menu, end: endStr } })
 }

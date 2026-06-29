@@ -68,6 +68,51 @@ export function pickFreeStaff(reservations, date, start, dur, capacity, staffLis
   return staffList.find((s) => slotFree(reservations, date, s, start, dur, capacity)) || null
 }
 
+// ===== メニュー連動の「拘束/放置」モデル =====
+// カラー・パーマ等の化学系メニューは、塗布→放置(薬剤待ち)→流し/仕上げ の流れで、
+// 放置中はスタイリストの手が空く。その間に別のお客様（短いカット等）を2人目として受けられる。
+const CHEMICAL = /カラー|白髪|ブリーチ|パーマ|矯正|デジ/
+const _overlap = (a, b, c, d) => a < d && c < b // 区間[a,b)と[c,d)が重なるか
+
+// メニューの「拘束(hands-on)」時間帯を返す。化学系は中央に放置（空き）ができる。
+export function menuBusyIntervals(menu, startMin, dur) {
+  const end = startMin + dur
+  const APPLY = 15, FINISH = 10 // 塗布(前半拘束) / 流し・ブロー(後半拘束)
+  if (!CHEMICAL.test(menu || '') || dur < APPLY + FINISH + 15) return [[startMin, end]]
+  // 前半[start, start+APPLY] と 後半[end-FINISH, end] が拘束。間は放置（空き）。
+  return [[startMin, startMin + APPLY], [end - FINISH, end]]
+}
+
+// そのスタッフが、指定メニューを startMin から受けられるか。
+// ①同時に居るお客様は最大2人 ②拘束(hands-on)時間が既存予約と重ならない（放置中なら2人目OK）。
+export function staffFreeForMenu(reservations, date, staff, startMin, menu, dur) {
+  const end = startMin + dur
+  const mine = reservations.filter((r) => !r.cancelled && r.date === date && r.staff === staff)
+  // ① 同時客数（時間帯が重なる予約）は最大2人まで
+  const concurrent = mine.filter((r) => _overlap(startMin, end, _toMin(r.start), _toMin(r.end))).length
+  if (concurrent >= 2) return false
+  // ② 拘束時間の衝突がないこと
+  const newBusy = menuBusyIntervals(menu, startMin, dur)
+  for (const r of mine) {
+    const rBusy = menuBusyIntervals(r.menu, _toMin(r.start), _toMin(r.end) - _toMin(r.start))
+    for (const [a, b] of newBusy) for (const [c, d] of rBusy) if (_overlap(a, b, c, d)) return false
+  }
+  return true
+}
+
+// おまかせ：そのメニューを受けられる出勤スタッフのうち、その日の担当件数が最少の人（負荷分散）。
+// 同数なら担当合計時間が短い人 → それも同じならリスト順。受けられる人がいなければ null。
+export function pickBalancedStaffForMenu(reservations, date, startMin, menu, dur, staffList) {
+  const free = staffList.filter((s) => staffFreeForMenu(reservations, date, s, startMin, menu, dur))
+  if (free.length === 0) return null
+  const dayRes = reservations.filter((r) => !r.cancelled && r.date === date)
+  const load = (s) => {
+    const mine = dayRes.filter((r) => r.staff === s)
+    return { count: mine.length, minutes: mine.reduce((t, r) => t + (_toMin(r.end) - _toMin(r.start)), 0) }
+  }
+  return free.map((s) => ({ s, ...load(s) })).sort((a, b) => a.count - b.count || a.minutes - b.minutes)[0].s
+}
+
 // ===== 休日判定 =====
 const WD_NAMES = ['日', '月', '火', '水', '木', '金', '土']
 export function weekdayOf(iso) { return new Date(iso + 'T00:00:00').getDay() }
