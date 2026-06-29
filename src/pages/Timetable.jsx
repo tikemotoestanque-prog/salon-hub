@@ -60,7 +60,11 @@ export default function Timetable() {
   const { reservations, customers, settings, addReservation, updateReservation, deleteReservation, cancelReservation } = useStore()
   const STAFF = settings.staff
   const nav = useNavigate()
-  const [date, setDate] = useState(TODAY_ISO)
+  // 表示中の日付を記憶（リロードしても直前に見ていた日のTTを表示）
+  const [date, setDate] = useState(() => {
+    try { return localStorage.getItem('tt.date') || TODAY_ISO } catch { return TODAY_ISO }
+  })
+  useEffect(() => { try { localStorage.setItem('tt.date', date) } catch { /* ignore */ } }, [date])
   // 表示モードを記憶（リロードしても直前の月次/日次を維持）
   const [viewMode, setViewMode] = useState(() => {
     try { return localStorage.getItem('tt.view') || 'month' } catch { return 'month' }
