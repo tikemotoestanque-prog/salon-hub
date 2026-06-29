@@ -195,7 +195,11 @@ export default function Timetable() {
               ))}
             </div>
             {/* staff columns */}
-            {STAFF.map((staff) => (
+            {STAFF.map((staff) => {
+              const staffRes = dayList.filter((r) => r.staff === staff)
+              // 同じスタッフ内で時間が重なる予約は横に並べる（佐藤＝2枠などを見えるように）
+              const layout = computeOverlapLayout(staffRes)
+              return (
               <div key={staff} className={(isStaffOff(settings, staff, date) ? 'tt-col-off' : '') + (closedReason ? ' tt-col-closed' : '')} style={{ position: 'relative', borderLeft: '1px solid var(--line)' }}>
                 {HOURS.map((h) => (
                   <div
@@ -205,17 +209,19 @@ export default function Timetable() {
                     onClick={() => openAdd(staff, `${h}:00`)}
                   />
                 ))}
-                {dayList.filter((r) => r.staff === staff).map((r) => {
+                {staffRes.map((r) => {
                   const dragging = drag && drag.id === r.id
                   const delta = dragging ? drag.deltaMin : 0
                   const sMin = toMin(r.start) + delta
                   const eMin = toMin(r.end) + delta
                   const meta = RES_SOURCE_META[r.source] || RES_SOURCE_META.other
+                  const lyt = layout[r.id] || { left: 0, width: 1 }
+                  const split = lyt.width < 1 // 重なりで横分割中か
                   return (
                     <div
                       key={r.id}
                       className={'tt-appt' + (dragging ? ' dragging' : '') + (r.cancelled ? ' tt-appt-cancelled' : '')}
-                      style={{ top: toY(sMin) + 2, height: toY(eMin) - toY(sMin) - 4, background: r.cancelled ? '#f5f5f5' : meta.bg, borderLeftColor: r.cancelled ? '#ccc' : meta.bar }}
+                      style={{ top: toY(sMin) + 2, height: toY(eMin) - toY(sMin) - 4, left: `calc(${lyt.left * 100}% + 3px)`, width: `calc(${lyt.width * 100}% - 6px)`, right: 'auto', background: r.cancelled ? '#f5f5f5' : meta.bg, borderLeftColor: r.cancelled ? '#ccc' : meta.bar }}
                       onPointerDown={(e) => onPointerDown(e, r)}
                       onPointerMove={onPointerMove}
                       onPointerUp={(e) => onPointerUp(e, r)}
@@ -223,13 +229,13 @@ export default function Timetable() {
                     >
                       <b style={{ color: r.cancelled ? '#aaa' : undefined }}>{minToStr(sMin)}–{minToStr(eMin)}</b>
                       <div className="nm" style={{ color: r.cancelled ? '#aaa' : undefined, textDecoration: r.cancelled ? 'line-through' : undefined }}>{r.customer || '（名前未入力）'}</div>
-                      {r.cancelled ? <span style={{ fontSize: 10, color: '#d32f2f' }}>キャンセル</span> : <div className="m">{r.menu}</div>}
-                      {!r.cancelled && <span className="tt-src" style={{ color: meta.color }}>{meta.short}</span>}
+                      {r.cancelled ? <span style={{ fontSize: 10, color: '#d32f2f' }}>キャンセル</span> : !split && <div className="m">{r.menu}</div>}
+                      {!r.cancelled && !split && <span className="tt-src" style={{ color: meta.color }}>{meta.short}</span>}
                     </div>
                   )
                 })}
               </div>
-            ))}
+            )})}
 
             {/* 現在時刻ライン */}
             {showNow && (
@@ -489,8 +495,9 @@ function MonthView({ monthYear, reservations, settings, today, onSelectDay, onPr
   )
 }
 
-// 重なり予約のレイアウト計算（グリーディ列割り当て）
-function computeWeekLayout(dayRes) {
+// 重なり予約のレイアウト計算（グリーディ列割り当て）。
+// 時間が重なる予約を横に並べる（2枠スタッフ＝同時2件などを見えるようにする）。日次・週次で共用。
+function computeOverlapLayout(dayRes) {
   const sorted = [...dayRes].sort((a, b) => toMin(a.start) - toMin(b.start))
   const cols = []
   for (const r of sorted) {
@@ -567,7 +574,7 @@ function WeekView({ days, reservations, settings, today, onSelectDay, onAddRes, 
               const closed = shopClosedReason(settings, d)
               const isT = d === today
               const dayRes = reservations.filter((r) => r.date === d && !r.cancelled)
-              const layout = computeWeekLayout(dayRes)
+              const layout = computeOverlapLayout(dayRes)
               return (
                 <div key={d} onClick={() => !closed && onAddRes(d)} style={{ position: 'relative', height: totalH, borderLeft: '1px solid var(--line)', cursor: closed ? 'default' : 'crosshair', background: closed ? '#f9f9f9' : isT ? 'rgba(232,245,233,0.35)' : undefined }}>
                   {/* 水平ライン */}
