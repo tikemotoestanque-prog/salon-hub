@@ -61,7 +61,11 @@ export default function Timetable() {
   const STAFF = settings.staff
   const nav = useNavigate()
   const [date, setDate] = useState(TODAY_ISO)
-  const [viewMode, setViewMode] = useState('month') // 'day' | 'month'
+  // 表示モードを記憶（リロードしても直前の月次/日次を維持）
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem('tt.view') || 'month' } catch { return 'month' }
+  })
+  useEffect(() => { try { localStorage.setItem('tt.view', viewMode) } catch { /* ignore */ } }, [viewMode])
   const [editing, setEditing] = useState(null) // 編集中のフォーム or null
   const [drag, setDrag] = useState(null) // { id, deltaMin } ドラッグ中の表示用
   const [now, setNow] = useState(new Date())

@@ -585,6 +585,9 @@ function genCycleReservations(registered, existingReservations) {
   return out
 }
 
-const baseReservations = [...handReservations, ...genReservations(sampleCustomers, handReservations)]
+// 手書き予約のうち、担当スタッフがその日休みのものは除外（休みの人に予約が入る矛盾を防ぐ）。
+// 例：今日が月曜なら田中は休み → 田中固定の手書き予約は出さない。
+const activeHandReservations = handReservations.filter((r) => !(SAMPLE_STAFF_OFF[r.staff] || []).includes(r.date))
+const baseReservations = [...activeHandReservations, ...genReservations(sampleCustomers, activeHandReservations)]
 const cycleReservations = genCycleReservations(sampleCustomers, baseReservations)
 export const sampleReservations = [...baseReservations, ...cycleReservations]
