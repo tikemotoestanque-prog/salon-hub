@@ -23,13 +23,25 @@ export default function LiffPage() {
       if (!liff) { setPhase('error'); setErrMsg('LIFF ID が設定されていません（開発中）'); return }
       if (!liff.isLoggedIn()) { liff.login(); return }
 
+      // クライアントでIDトークンを取得（診断のためトークンの有無も把握）
+      let token = ''
+      try { token = liff.getIDToken() || '' } catch { /* ignore */ }
+
       // 既に紐付き済みか確認（本人のIDトークンでサーバーが判定）
-      const res = await apiFetch('/api/liff/resolve', { method: 'POST', body: '{}' })
-      if (!res.ok) { setPhase('error'); setErrMsg('ログインの確認に失敗しました。時間をおいて再度お試しください。'); return }
-      const { id } = await res.json().catch(() => ({}))
-      if (id) goPortal(id)
+      const res = await fetch('/api/liff/resolve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: '{}',
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setPhase('error')
+        setErrMsg(`診断情報\nトークン: ${token ? `取得OK(${token.length}文字)` : '取得できず'}\nサーバー: ${res.status} ${j.error || ''}${j.detail ? `\n詳細: ${j.detail}` : ''}`)
+        return
+      }
+      if (j.id) goPortal(j.id)
       else setPhase('verify')
-    })().catch(() => { setPhase('error'); setErrMsg('LINE 認証に失敗しました') })
+    })().catch((e) => { setPhase('error'); setErrMsg('LINE 認証に失敗しました\n' + String(e)) })
   }, [])
 
   const handleVerify = async (e) => {
