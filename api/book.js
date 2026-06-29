@@ -5,7 +5,7 @@
 import { admin } from './_lib/admin.js'
 import { userIdFrom } from './_lib/liff.js'
 import { pushText } from './_lib/line.js'
-import { staffFreeForMenu, pickBalancedStaffForMenu, workingStaff } from '../src/utils.js'
+import { staffFreeForMenu, pickBalancedStaffForMenu, workingStaffByRule, shopClosedReason } from '../src/utils.js'
 
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 const minToStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -39,7 +39,11 @@ export default async function handler(req, res) {
   const dur = (settings.menuDurations && settings.menuDurations[menu]) || 60
   const dayRes = (dayRows || []).filter((r) => !r.cancelled)
   const closeMin = toMin(settings.closeTime || '19:00')
-  const working = workingStaff(settings, staffList, date)
+
+  // 定休日（火曜など）は受け付けない
+  if (shopClosedReason(settings, date)) return res.status(409).json({ ok: false, error: 'closed' })
+  // 出勤スタッフは曜日ルールで判定（DBの設定に休み情報が無いため、クライアントと同じ規則で再現）
+  const working = workingStaffByRule(staffList, date)
 
   // 希望時間から30分ずつ後ろにずらして、メニューを受けられる枠を探す。
   // ・指名：そのスタッフの拘束が空く時間を探す（放置中なら2人目OK）

@@ -134,6 +134,19 @@ export function workingStaff(settings, staffList, iso) {
   return staffList.filter((s) => !isStaffOff(settings, s, iso))
 }
 
+// スタッフの週1固定休み（曜日ルール）。sampleData.computeStaffOff と同じ規則。
+// staffList の並び順インデックスで割り当て：0→月, 1→水, 2→木, 3→金 …（火曜は定休なので除く）。
+// DBに休み情報を持たない場面（サーバーのAPI）でも、クライアントと同じ休みを再現するために使う。
+export const OFF_WEEKDAYS = [1, 3, 4, 5]
+export function isStaffOffByRule(staffList, staff, iso) {
+  const i = staffList.indexOf(staff)
+  if (i < 0) return false
+  return weekdayOf(iso) === OFF_WEEKDAYS[i % OFF_WEEKDAYS.length]
+}
+export function workingStaffByRule(staffList, iso) {
+  return staffList.filter((s) => !isStaffOffByRule(staffList, s, iso))
+}
+
 // 10回ごとのマイルストーンクーポン定義（お客様画面とスタッフ画面で共用）
 export const MILESTONE_COUPONS = [
   { t: 'カット 10%OFF', s: '10回来店達成おめでとうございます！', emoji: '🎉' },
