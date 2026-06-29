@@ -1,17 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { supabase, hasSupabase } from '../supabaseClient.js'
-import { useStore } from '../store.jsx'
-
-const LIFF_ID = import.meta.env.VITE_LIFF_ID
+import { ensureLiff, apiFetch } from '../lib/liff.js'
 
 export default function LiffPage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { updateCustomer, addCustomer } = useStore()
   const tabParam = searchParams.get('tab') // book / card / karte
   const [phase, setPhase] = useState('loading') // loading | verify | notfound | register | error | done
-  const [lineUserId, setLineUserId] = useState('')
   const [name, setName] = useState('')
   const [phone4, setPhone4] = useState('')
   const [errMsg, setErrMsg] = useState('')
@@ -20,76 +15,38 @@ export default function LiffPage() {
   const [reg, setReg] = useState({ name: '', kana: '', phone: '', birthday: '', gender: '' })
   const setRegField = (k) => (e) => setReg((r) => ({ ...r, [k]: e.target.value }))
 
+  const goPortal = (id) => navigate(`/u/${id}${tabParam ? `?tab=${tabParam}` : ''}`, { replace: true })
+
   useEffect(() => {
-    if (!LIFF_ID) { setPhase('error'); setErrMsg('LIFF ID が設定されていません（開発中）'); return }
+    ;(async () => {
+      const liff = await ensureLiff()
+      if (!liff) { setPhase('error'); setErrMsg('LIFF ID が設定されていません（開発中）'); return }
+      if (!liff.isLoggedIn()) { liff.login(); return }
 
-    import('@line/liff').then(({ default: liff }) => {
-      liff.init({ liffId: LIFF_ID })
-        .then(async () => {
-          if (!liff.isLoggedIn()) { liff.login(); return }
-
-          const profile = await liff.getProfile()
-          const uid = profile.userId
-          setLineUserId(uid)
-
-          if (!hasSupabase) { setPhase('error'); setErrMsg('Supabase 未設定（デモモード）'); return }
-
-          // 既に紐付き済みか確認
-          const { data } = await supabase
-            .from('customers')
-            .select('id')
-            .eq('integrations->>lineUserId', uid)
-            .maybeSingle()
-
-          if (data) {
-            const dest = `/u/${data.id}${tabParam ? `?tab=${tabParam}` : ''}`
-            navigate(dest, { replace: true })
-          } else {
-            setPhase('verify')
-          }
-        })
-        .catch(() => { setPhase('error'); setErrMsg('LINE 認証に失敗しました') })
-    })
-  }, [navigate])
+      // 既に紐付き済みか確認（本人のIDトークンでサーバーが判定）
+      const res = await apiFetch('/api/liff/resolve', { method: 'POST', body: '{}' })
+      if (!res.ok) { setPhase('error'); setErrMsg('ログインの確認に失敗しました。時間をおいて再度お試しください。'); return }
+      const { id } = await res.json().catch(() => ({}))
+      if (id) goPortal(id)
+      else setPhase('verify')
+    })().catch(() => { setPhase('error'); setErrMsg('LINE 認証に失敗しました') })
+  }, [])
 
   const handleVerify = async (e) => {
     e.preventDefault()
     setErrMsg('')
-    setSubmitting(true)
-
     const nameTrim = name.trim()
     const phoneTrim = phone4.trim()
-
     if (phoneTrim.length !== 4 || !/^\d{4}$/.test(phoneTrim)) {
       setErrMsg('電話番号の下4桁を数字で入力してください')
-      setSubmitting(false)
       return
     }
-
-    // 名前で顧客を検索（部分一致）
-    const { data: candidates } = await supabase
-      .from('customers')
-      .select('id, name, phone')
-      .ilike('name', `%${nameTrim}%`)
-
-    const matched = (candidates || []).find((c) => (c.phone || '').replace(/[-\s]/g, '').endsWith(phoneTrim))
-
-    if (!matched) {
-      setPhase('notfound')
-      setSubmitting(false)
-      return
-    }
-
-    // LINE IDを紐付け保存
-    const { data: current } = await supabase.from('customers').select('integrations').eq('id', matched.id).single()
-    const newIntegrations = { ...(current?.integrations || {}), lineUserId }
-    await supabase.from('customers').update({ integrations: newIntegrations }).eq('id', matched.id)
-
-    // storeも即時反映（予約画面でlineUserIdが使えるように）
-    updateCustomer(matched.id, { integrations: newIntegrations })
-
-    const dest = `/u/${matched.id}${tabParam ? `?tab=${tabParam}` : ''}`
-    navigate(dest, { replace: true })
+    setSubmitting(true)
+    const res = await apiFetch('/api/liff/link', { method: 'POST', body: JSON.stringify({ name: nameTrim, phone4: phoneTrim }) })
+    const { id } = await res.json().catch(() => ({}))
+    setSubmitting(false)
+    if (id) goPortal(id)
+    else setPhase('notfound')
   }
 
   // 新規のお客様が自分で顧客登録する
@@ -101,27 +58,14 @@ export default function LiffPage() {
     if (!nm) { setErrMsg('お名前を入力してください'); return }
     if (!/^\d{10,11}$/.test(phoneDigits)) { setErrMsg('電話番号を正しく入力してください（ハイフンなし10〜11桁）'); return }
     setSubmitting(true)
-
-    // 顧客レコードを作成（LINE経由＝source: line・LINE連携済）
-    const newId = addCustomer({
-      name: nm, kana: reg.kana.trim(), phone: reg.phone.trim(),
-      birthday: reg.birthday, gender: reg.gender, line: true, source: 'line',
+    const res = await apiFetch('/api/liff/register', {
+      method: 'POST',
+      body: JSON.stringify({ name: nm, kana: reg.kana.trim(), phone: reg.phone.trim(), birthday: reg.birthday, gender: reg.gender }),
     })
-    // LINE userId を紐付け
-    const integrations = { line: '連携済', instagram: '未連携', google: '未送信', lineUserId }
-    updateCustomer(newId, { integrations })
-
-    // スタッフのダッシュボードに新規登録を通知
-    if (hasSupabase) {
-      await supabase.from('notifications').insert({
-        type: 'new_customer', customer_id: newId, customer_name: nm,
-        message: `${nm}様がLINEから新規登録しました`,
-        read: false, created_at: new Date().toISOString(),
-      })
-    }
-
-    const dest = `/u/${newId}${tabParam ? `?tab=${tabParam}` : ''}`
-    navigate(dest, { replace: true })
+    const { id } = await res.json().catch(() => ({}))
+    setSubmitting(false)
+    if (id) goPortal(id)
+    else setErrMsg('登録に失敗しました。お手数ですが入力内容をご確認ください。')
   }
 
   if (phase === 'loading') {

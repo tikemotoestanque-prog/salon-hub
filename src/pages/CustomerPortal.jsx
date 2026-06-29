@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useSearchParams, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
+import { apiFetch } from '../lib/liff.js'
 import BookingForm from '../components/BookingForm.jsx'
 import QRCode from 'qrcode'
 import { daysSince, TODAY, TODAY_ISO, MILESTONE_COUPONS } from '../utils.js'
@@ -8,14 +9,34 @@ import { daysSince, TODAY, TODAY_ISO, MILESTONE_COUPONS } from '../utils.js'
 export default function CustomerPortal() {
   const { id } = useParams()
   const [params] = useSearchParams()
-  const { customers, reservations, settings } = useStore()
-  const c = customers.find((x) => x.id === id)
+  const { settings } = useStore() // 設定はPIIなし＝anonで参照可
+  const [data, setData] = useState(undefined) // undefined=読込中, null=見つからず, object=本人データ
   const [tab, setTab] = useState(['karte', 'book', 'card'].includes(params.get('tab')) ? params.get('tab') : 'karte')
 
-  if (!c) {
-    return <div className="empty">お客様が見つかりません。<br /><Link className="back-link" to="/">← 戻る</Link></div>
+  // 本人の1件だけをAPIから取得（IDトークンがあれば本人、なければデモidで取得）
+  useEffect(() => {
+    let alive = true
+    ;(async () => {
+      try {
+        const res = await apiFetch(`/api/portal?demo=${encodeURIComponent(id)}`)
+        if (!res.ok) { if (alive) setData(null); return }
+        const json = await res.json()
+        if (alive) setData(json)
+      } catch { if (alive) setData(null) }
+    })()
+    return () => { alive = false }
+  }, [id])
+
+  // 使用済みクーポンを本人として記録（取得済みデータも即時反映＝デモでも見た目が動く）
+  const redeem = (tag) => {
+    setData((d) => d ? { ...d, redemptions: [...d.redemptions, { customerId: d.customer.id, tag, usedBy: 'customer' }] } : d)
+    apiFetch('/api/redeem', { method: 'POST', body: JSON.stringify({ tag }) }).catch(() => {})
   }
 
+  if (data === undefined) return <div className="empty" style={{ padding: 60, textAlign: 'center' }}>読み込み中…</div>
+  if (data === null) return <div className="empty">お客様が見つかりません。<br /><Link className="back-link" to="/">← 戻る</Link></div>
+
+  const c = data.customer
   const rank = settings.statuses[c.status]?.label || '会員'
 
   return (
@@ -28,8 +49,8 @@ export default function CustomerPortal() {
 
         <div className="cp-body">
           {tab === 'karte' && <Karte c={c} rank={rank} />}
-          {tab === 'book' && <BookTab c={c} reservations={reservations} />}
-          {tab === 'card' && <Card c={c} rank={rank} />}
+          {tab === 'book' && <BookTab c={c} reservations={data.reservations} />}
+          {tab === 'card' && <Card c={c} rank={rank} redemptions={data.redemptions} onRedeem={redeem} />}
         </div>
 
         <div className="cp-tabs">
@@ -102,15 +123,14 @@ function BookTab({ c, reservations }) {
   )
 }
 
-function Card({ c, rank }) {
-  const { couponRedemptions, redeemCoupon } = useStore()
+function Card({ c, rank, redemptions, onRedeem }) {
   const visitCount = c.visitCount || 0
   const memberNo = (c.id || '').toUpperCase().padStart(6, '0')
   const currentStamps = visitCount % 10
   const completedCycles = Math.floor(visitCount / 10)
 
-  // 使用済みクーポンはSupabase（store）が真実。全端末で共有される
-  const usedKeys = couponRedemptions.filter((r) => r.customerId === c.id).map((r) => r.tag)
+  // 使用済みクーポンはSupabase（/api/portal）が真実。全端末で共有される
+  const usedKeys = (redemptions || []).filter((r) => r.customerId === c.id).map((r) => r.tag)
   const [presenting, setPresenting] = useState(null)
   const [qrUrl, setQrUrl] = useState('')
 
@@ -122,7 +142,7 @@ function Card({ c, rank }) {
 
   const handleUse = (key) => setPresenting(key)
   const handleConfirm = (key) => {
-    redeemCoupon(c.id, key, 'customer')
+    onRedeem(key)
     setPresenting(null)
   }
 

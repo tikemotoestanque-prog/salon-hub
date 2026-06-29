@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { sampleCustomers, sampleReservations, DEFAULT_SETTINGS, SAMPLE_STAFF_OFF } from './data/sampleData.js'
 import { computeStatus, computePattern, priceOf, TODAY_ISO } from './utils.js'
 import { supabase, hasSupabase } from './supabaseClient.js'
+import { useAuth } from './AuthContext.jsx'
 
 const StoreContext = createContext(null)
 const LS_KEY = 'salonhub.v1'
@@ -67,6 +68,7 @@ const fromRedemptionRow = (r) => ({ customerId: r.customer_id, tag: r.coupon_tag
 const toRedemptionRow = (x) => ({ customer_id: x.customerId, coupon_tag: x.tag, used_by: x.usedBy || null })
 
 export function StoreProvider({ children }) {
+  const { session } = useAuth()
   const [state, setState] = useState(hasSupabase
     ? { customers: [], reservations: [], settings: freshSettings(), couponRedemptions: [] }
     : loadLocal)
@@ -74,28 +76,37 @@ export function StoreProvider({ children }) {
   const stateRef = useRef(state)
   useEffect(() => { stateRef.current = state }, [state])
 
-  // ----- 初期ロード（Supabase）。空なら初回シード -----
+  // ----- 初期ロード（Supabase）。認証状態でロード範囲を変える -----
+  // ・スタッフ(authenticated)：全顧客・予約をロード（空なら初回シード）。
+  // ・お客様/未ログイン(anon)：設定だけロード。顧客データは各お客様ページがAPIで本人分のみ取得。
+  //   → anonキーで全顧客が端末に流れるのを防ぐ（施錠後はRLSでも遮断される）。
   useEffect(() => {
     if (!hasSupabase) return
+    if (session === undefined) return // 認証初期化待ち
     let alive = true
     ;(async () => {
       try {
-        let [{ data: cust }, { data: res }, { data: setRow }] = await Promise.all([
+        // 設定はPIIなし＝anonでもSELECT可。お客様画面の営業時間・メニュー表示に使う。
+        const { data: setRow } = await supabase.from('settings').select('data').eq('id', 1).maybeSingle()
+        const baseSettings = { ...freshSettings(), ...((setRow && setRow.data) || {}), staffOff: SAMPLE_STAFF_OFF }
+
+        if (!session) {
+          // 未ログイン（お客様ページ）：顧客・予約はロードしない
+          if (alive) setState({ customers: [], reservations: [], settings: baseSettings, couponRedemptions: [] })
+          return
+        }
+
+        // スタッフ：全件ロード＋初回シード
+        let [{ data: cust }, { data: res }] = await Promise.all([
           supabase.from('customers').select('*').order('created_at', { ascending: false }).order('id', { ascending: true }),
           supabase.from('reservations').select('*'),
-          supabase.from('settings').select('data').eq('id', 1).maybeSingle(),
         ])
-        // 初回（テーブルが空）ならサンプルデータを投入
-        // ※ RLSでブロックされた場合はseeding不要なので認証済み確認
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session && (!cust || cust.length === 0)) {
+        if (!cust || cust.length === 0) {
           await supabase.from('customers').upsert(sampleCustomers.map(toCustomerRow))
           await supabase.from('settings').upsert({ id: 1, data: freshSettings() })
           cust = sampleCustomers.map(toCustomerRow)
-          setRow = { data: freshSettings() }
         }
-        // 予約テーブルが空なら（顧客の有無に関わらず）再シード
-        if (session && (!res || res.length === 0)) {
+        if (!res || res.length === 0) {
           await supabase.from('reservations').upsert(sampleReservations.map(toResRow))
           res = sampleReservations.map(toResRow)
         }
@@ -109,8 +120,7 @@ export function StoreProvider({ children }) {
         setState({
           customers: (cust || []).map(fromCustomerRow),
           reservations: (res || []).map(fromResRow),
-          // staffOffは実行時生成（SAMPLE_STAFF_OFF）を真実とし、保存値で上書きされないようにする
-          settings: { ...freshSettings(), ...((setRow && setRow.data) || {}), staffOff: SAMPLE_STAFF_OFF },
+          settings: baseSettings,
           couponRedemptions: redemptions,
         })
       } catch (e) {
@@ -121,7 +131,7 @@ export function StoreProvider({ children }) {
       }
     })()
     return () => { alive = false }
-  }, [])
+  }, [session])
 
   // ----- localStorage保存（Supabase未設定時のみ） -----
   useEffect(() => {
