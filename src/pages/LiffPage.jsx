@@ -23,9 +23,9 @@ export default function LiffPage() {
       if (!liff) { setPhase('error'); setErrMsg('LIFF ID が設定されていません（開発中）'); return }
       if (!liff.isLoggedIn()) { liff.login(); return }
 
-      // クライアントでIDトークンを取得（診断のためトークンの有無も把握）
+      // クライアントでアクセストークンを取得（診断のためトークンの有無も把握）
       let token = ''
-      try { token = liff.getIDToken() || '' } catch { /* ignore */ }
+      try { token = liff.getAccessToken() || '' } catch { /* ignore */ }
 
       // 既に紐付き済みか確認（本人のIDトークンでサーバーが判定）
       const res = await fetch('/api/liff/resolve', {

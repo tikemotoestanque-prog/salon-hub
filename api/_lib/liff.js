@@ -1,41 +1,39 @@
-// LINE IDトークンをサーバー側で検証し、信頼できる lineUserId(sub) を返す。
+// LINE アクセストークンをサーバー側で検証し、信頼できる lineUserId を返す。
+// LIFFの liff.getAccessToken() は openidスコープに依存せず確実に取れるため、
+// IDトークン方式よりハマりにくい。検証は LINE のプロフィールAPIを叩いて行う
+// （アクセストークンが無効なら 401 が返る＝なりすまし不可）。
 // これにより「URLのidを知っているだけ」では他人になりすませない（本人保証）。
-const CHANNEL_ID = process.env.LINE_LOGIN_CHANNEL_ID
-export const hasChannelId = Boolean(CHANNEL_ID)
 
-// Authorization: Bearer <idToken> からトークンを取り出す
+// Authorization: Bearer <accessToken> からトークンを取り出す
 export function bearer(req) {
   const h = req.headers['authorization'] || ''
   return h.startsWith('Bearer ') ? h.slice(7) : ''
 }
 
-// IDトークンを検証 → 正しければ LINEユーザーID(sub) を、ダメなら null を返す
-export async function verifyIdToken(idToken) {
-  const r = await verifyIdTokenDetailed(idToken)
-  return r.sub
-}
-
-// 診断用：検証結果を理由つきで返す { sub, reason, detail }
-export async function verifyIdTokenDetailed(idToken) {
-  if (!CHANNEL_ID) return { sub: null, reason: 'no_channel_id' }
-  if (!idToken) return { sub: null, reason: 'no_token' }
+// アクセストークンを LINE プロフィールAPIで検証し、userId を返す。
+// 診断用に理由つきで返す { sub, reason, detail }
+export async function verifyTokenDetailed(accessToken) {
+  if (!accessToken) return { sub: null, reason: 'no_token' }
   try {
-    const res = await fetch('https://api.line.me/oauth2/v2.1/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ id_token: idToken, client_id: CHANNEL_ID }),
+    const res = await fetch('https://api.line.me/v2/profile', {
+      headers: { Authorization: `Bearer ${accessToken}` },
     })
     const data = await res.json().catch(() => ({}))
-    if (!res.ok) return { sub: null, reason: 'verify_failed', detail: data.error_description || data.error || res.status }
-    return { sub: data.sub || null, reason: data.sub ? 'ok' : 'no_sub' }
+    if (!res.ok) return { sub: null, reason: 'verify_failed', detail: data.message || res.status }
+    return { sub: data.userId || null, reason: data.userId ? 'ok' : 'no_user' }
   } catch (e) {
     return { sub: null, reason: 'exception', detail: String(e) }
   }
 }
 
+// 正しければ LINEユーザーID を、ダメなら null を返す
+export async function verifyToken(accessToken) {
+  return (await verifyTokenDetailed(accessToken)).sub
+}
+
 // リクエストから本人のLINEユーザーIDを取得（無効なら null）
 export async function userIdFrom(req) {
-  return verifyIdToken(bearer(req))
+  return verifyToken(bearer(req))
 }
 
 // デモ閲覧を許可するか（salopiデモ環境のみ DEMO_MODE=1）。

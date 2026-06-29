@@ -14,11 +14,12 @@ export async function ensureLiff() {
   return initPromise
 }
 
-// 本人のIDトークン（未ログイン・未設定なら null）
-export async function getIdToken() {
+// 本人のアクセストークン（未ログイン・未設定なら null）。
+// getIDToken() はopenidスコープ依存で取れないことがあるため、確実に取れるアクセストークンを使う。
+export async function getLineToken() {
   const liff = await ensureLiff()
   if (!liff || !liff.isLoggedIn()) return null
-  try { return liff.getIDToken() } catch { return null }
+  try { return liff.getAccessToken() } catch { return null }
 }
 
 // 未ログインならLINEログインへ誘導
@@ -28,9 +29,9 @@ export async function liffLogin() {
   return liff
 }
 
-// IDトークンを Authorization に付けて fetch（JSON前提）
+// アクセストークンを Authorization に付けて fetch（JSON前提）
 export async function apiFetch(url, opts = {}) {
-  const token = await getIdToken()
+  const token = await getLineToken()
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
   if (token) headers.Authorization = `Bearer ${token}`
   const res = await fetch(url, { ...opts, headers })
