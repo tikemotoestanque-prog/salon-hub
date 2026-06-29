@@ -18,7 +18,10 @@ export default function BookingForm({ customer }) {
   const [name, setName] = useState(customer ? customer.name : '')
   const [menu, setMenu] = useState(customer?.lastMenu || settings.menus[0] || 'カット')
   const [date, setDate] = useState(addDays(TODAY_ISO, 3))
-  const [staff, setStaff] = useState('')
+  // 既存のお客様は基本担当スタイリストを初期選択（在籍スタッフの場合）。ゲストや未設定は「おまかせ」
+  const [staff, setStaff] = useState(
+    customer?.assignedStaff && staffList.includes(customer.assignedStaff) ? customer.assignedStaff : ''
+  )
   const [time, setTime] = useState(null)
   const [result, setResult] = useState(null) // {ok, date, time, staff, menu}
   const [submitting, setSubmitting] = useState(false)
