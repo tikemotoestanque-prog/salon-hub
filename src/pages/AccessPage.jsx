@@ -1,7 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { useStore } from '../store.jsx'
 
 // LINEリッチメニューの「ACCESS」専用ページ。HP全体ではなく、店舗情報に直行する
 export default function AccessPage() {
+  const { settings } = useStore()
   const nav = useNavigate()
 
   return (
@@ -12,7 +14,7 @@ export default function AccessPage() {
       </div>
 
       <section className="ap-head">
-        <div className="lp-logo">HAIR SALON GRACE</div>
+        <div className="lp-logo">{settings.salonName || 'Hair Salon GRACE'}</div>
         <h1>アクセス</h1>
         <p>ご来店ありがとうございます。道順・駐車場のご案内です。</p>
       </section>
@@ -23,7 +25,7 @@ export default function AccessPage() {
         <div className="ap-road ap-road-h" />
         <div className="ap-road ap-road-v" />
         <div className="ap-pin">📍</div>
-        <div className="ap-pin-label">Hair Salon GRACE</div>
+        <div className="ap-pin-label">{settings.salonName || 'Hair Salon GRACE'}</div>
         <div className="ap-station">🚉 ○○駅</div>
         <span className="ap-map-note">※ デモ用の地図イメージです（実際はGoogleマップが入ります）</span>
       </div>

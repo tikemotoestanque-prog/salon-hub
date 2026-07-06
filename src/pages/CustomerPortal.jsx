@@ -186,7 +186,7 @@ function Card({ c, rank, redemptions, onRedeem }) {
       <div className="cp-member">
         <div className="cp-member-top"><span>MEMBER'S CARD</span><span>{rank}</span></div>
         <div className="cp-member-name">{c.name} 様</div>
-        <div className="cp-member-no">No. GRACE-{memberNo}</div>
+        <div className="cp-member-no">No. {memberNo}</div>
         {qrUrl && (
           <div style={{ background: '#fff', borderRadius: 10, padding: 10, width: 'fit-content', margin: '12px auto 4px' }}>
             <img src={qrUrl} alt="チェックインQR" width={120} height={120} style={{ display: 'block' }} />

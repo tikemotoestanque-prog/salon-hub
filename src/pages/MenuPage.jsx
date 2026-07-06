@@ -30,7 +30,7 @@ export default function MenuPage() {
       </div>
 
       <section className="ap-head">
-        <div className="lp-logo">HAIR SALON GRACE</div>
+        <div className="lp-logo">{settings.salonName || 'Hair Salon GRACE'}</div>
         <h1>メニュー & 料金</h1>
         <p>髪のお悩みに合わせて、最適なメニューをご提案します。</p>
       </section>

@@ -23,7 +23,7 @@ export default function LandingPage() {
       {/* HERO */}
       <section className="lp-hero">
         <div className="lp-hero-in">
-          <div className="lp-logo">HAIR SALON GRACE</div>
+          <div className="lp-logo">{settings.salonName || 'Hair Salon GRACE'}</div>
           <h1>あなたの「似合う」を、<br />ずっと覚えているサロン。</h1>
           <p>カルテ・薬剤レシピ・髪の悩みをすべて記録。次に来たときも、いつものあなたに最適な提案を。</p>
           <div className="lp-cta">
