@@ -21,8 +21,8 @@ export default function Login() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f5f5f5' }}>
       <div style={{ background: '#fff', padding: '2.5rem', borderRadius: '12px', boxShadow: '0 2px 16px rgba(0,0,0,0.1)', width: '100%', maxWidth: '380px' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✂️</div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>サロピ スタッフログイン</h1>
+          <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🐸</div>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>オカエル スタッフログイン</h1>
         </div>
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '1rem' }}>

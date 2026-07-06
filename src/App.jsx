@@ -71,7 +71,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <div className="brand">✂️ サロピ <small>顧客管理</small></div>
+        <div className="brand">🐸 オカエル <small>顧客管理</small></div>
         <nav className="nav">
           <NavLink to="/" end>ダッシュボード</NavLink>
           <NavLink to="/timetable">予約TT</NavLink>

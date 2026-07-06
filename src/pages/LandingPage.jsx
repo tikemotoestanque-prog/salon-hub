@@ -16,7 +16,7 @@ export default function LandingPage() {
   return (
     <div className="lp">
       <div className="lp-demobar">
-        🧪 これは<strong>デモのサロンHP</strong>です。「LINEで予約」を押すと、HP→公式LINE→サロピに新規顧客として流入する動線を体験できます。
+        🧪 これは<strong>デモの店舗HP</strong>です。「LINEで予約」を押すと、HP→公式LINE→オカエルに新規顧客として流入する動線を体験できます。
         <Link to="/" className="lp-back">← 管理画面に戻る</Link>
       </div>
 

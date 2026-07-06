@@ -130,7 +130,7 @@ export default function CustomerMyPage() {
         {/* オーナーだけが見る「自動配信の裏側」 */}
         <div className="lsched">
           <h3>⚙️ この自動配信の裏側（オーナー画面）</h3>
-          <p className="sub">来店日を起点に、サロピが自動でLINEを配信します。文面はお客さまの状態に合わせて自動生成。</p>
+          <p className="sub">来店日を起点に、オカエルが自動でLINEを配信します。文面はお客さまの状態に合わせて自動生成。</p>
           {msgs.map((m, i) => (
             <div className="sch-row" key={i}>
               <span className="sch-when">{shortDate(m.date)} {m.time}</span>
