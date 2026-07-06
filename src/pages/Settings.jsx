@@ -1,6 +1,17 @@
 import { useState } from 'react'
 import { useStore } from '../store.jsx'
 
+// LINE自動送信の既定文面（api/_lib/templates.js の DEFAULT_TEMPLATES と揃える）。
+// プレースホルダ: {salonName} {customerName} {date} {time} {menu} {staff}
+const DEFAULT_LINE_TEMPLATES = {
+  greeting:
+    'ご登録ありがとうございます😊\n{salonName}です！\n\nご予約はメニューから24時間いつでもどうぞ。\nご相談もこのトークからお気軽に🌿',
+  bookingConfirm:
+    '{customerName}様、ご予約ありがとうございます！\n\n📅 {date} {time}〜\n📋 {menu}\n👤 担当：{staff}\n\nご来店をお待ちしております😊',
+  reminder:
+    '{customerName}様、明日のご来店リマインドです😊\n\n📅 {date} {time}〜\n📋 {menu}\n👤 担当：{staff}\n\nお気をつけてお越しください🌿',
+}
+
 export default function Settings() {
   const { settings, updateSettings, recomputeAll } = useStore()
 
@@ -21,6 +32,7 @@ export default function Settings() {
   const [statusList, setStatusList] = useState(
     Object.entries(settings.statuses).map(([key, m]) => ({ key, ...m }))
   )
+  const [lineTemplates, setLineTemplates] = useState({ ...DEFAULT_LINE_TEMPLATES, ...(settings.lineTemplates || {}) })
   const [saved, setSaved] = useState('')
 
   const flash = (msg) => { setSaved(msg); setTimeout(() => setSaved(''), 2500) }
@@ -82,6 +94,7 @@ export default function Settings() {
       closedWeekdays,
       closedDates,
       staffOff: cleanOff,
+      lineTemplates,
     })
     return statuses
   }
@@ -247,6 +260,36 @@ export default function Settings() {
           </div>
         ))}
         <button className="btn ghost sm" onClick={addStatus}>＋ ステータスを追加</button>
+      </div>
+
+      {/* LINE自動送信の文面 */}
+      <div className="card section">
+        <h3>💬 LINE自動送信の文面</h3>
+        <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted)' }}>
+          友だち追加のあいさつ・予約確認・前日リマインドの文面を編集できます。空欄にすると既定の文面が使われます。
+        </p>
+        <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--muted)' }}>
+          使えるプレースホルダ：
+          <code>{'{salonName}'}</code>（店名） <code>{'{customerName}'}</code>（お客様名） <code>{'{date}'}</code>（日付） <code>{'{time}'}</code>（時間） <code>{'{menu}'}</code>（メニュー） <code>{'{staff}'}</code>（担当）
+        </p>
+        <div className="field">
+          <label>友だち追加のあいさつ（使える項目：店名）</label>
+          <textarea rows={5} value={lineTemplates.greeting}
+            onChange={(e) => setLineTemplates({ ...lineTemplates, greeting: e.target.value })}
+            placeholder={DEFAULT_LINE_TEMPLATES.greeting} />
+        </div>
+        <div className="field">
+          <label>予約確認（使える項目：店名・お客様名・日付・時間・メニュー・担当）</label>
+          <textarea rows={7} value={lineTemplates.bookingConfirm}
+            onChange={(e) => setLineTemplates({ ...lineTemplates, bookingConfirm: e.target.value })}
+            placeholder={DEFAULT_LINE_TEMPLATES.bookingConfirm} />
+        </div>
+        <div className="field">
+          <label>前日リマインド（使える項目：店名・お客様名・日付・時間・メニュー・担当）</label>
+          <textarea rows={7} value={lineTemplates.reminder}
+            onChange={(e) => setLineTemplates({ ...lineTemplates, reminder: e.target.value })}
+            placeholder={DEFAULT_LINE_TEMPLATES.reminder} />
+        </div>
       </div>
 
       <div className="form-actions" style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '12px 0' }}>

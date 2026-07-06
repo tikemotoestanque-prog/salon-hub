@@ -3,6 +3,7 @@
 // vercel.json の crons に設定が必要
 
 import { createClient } from '@supabase/supabase-js'
+import { getTemplates, applyTemplate } from './_lib/templates.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -31,17 +32,25 @@ export default async function handler(req, res) {
   tomorrow.setDate(tomorrow.getDate() + 1)
   const tomorrowISO = tomorrow.toISOString().slice(0, 10)
 
-  const { data: reservations } = await supabase
-    .from('reservations')
-    .select('*, customers(name, integrations)')
-    .eq('date', tomorrowISO)
-    .eq('cancelled', false)
+  const [{ data: reservations }, { data: setRow }] = await Promise.all([
+    supabase
+      .from('reservations')
+      .select('*, customers(name, integrations)')
+      .eq('date', tomorrowISO)
+      .eq('cancelled', false),
+    supabase.from('settings').select('data').eq('id', 1).maybeSingle(),
+  ])
+  const settings = (setRow && setRow.data) || {}
+  const salonName = settings.salonName || 'Hair Salon GRACE'
+  const tmpl = getTemplates(settings)
 
   let sent = 0
   for (const r of reservations || []) {
     const lineUserId = r.customers?.integrations?.lineUserId
     if (!lineUserId) continue
-    const text = `${r.customers.name}様、明日のご来店リマインドです✂️\n\n📅 ${tomorrowISO} ${r.start}〜\n💇 ${r.menu}\n👤 担当：${r.staff}\n\nお気をつけてお越しください🌿`
+    const text = applyTemplate(tmpl.reminder, {
+      customerName: r.customers.name, salonName, date: tomorrowISO, time: r.start, menu: r.menu, staff: r.staff,
+    })
     await sendLine(lineUserId, text)
     sent++
   }

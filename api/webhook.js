@@ -3,6 +3,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { getTemplates, applyTemplate } from './_lib/templates.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -36,15 +37,17 @@ export default async function handler(req, res) {
     if (event.type === 'follow') {
       const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
       if (token) {
+        const { data: setRow } = await supabase
+          .from('settings').select('data').eq('id', 1).maybeSingle()
+        const settings = (setRow && setRow.data) || {}
+        const salonName = settings.salonName || 'Hair Salon GRACE'
+        const text = applyTemplate(getTemplates(settings).greeting, { salonName })
         await fetch('https://api.line.me/v2/bot/message/push', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             to: event.source.userId,
-            messages: [{
-              type: 'text',
-              text: 'ご登録ありがとうございます😊\nHair Salon GRACEです✂️\n\nご予約は下のメニュー「ご予約」から24時間いつでもOKです。\nお悩みやなりたいイメージも、このトークからお気軽にご相談くださいね🌿',
-            }],
+            messages: [{ type: 'text', text }],
           }),
         }).catch(() => {})
       }

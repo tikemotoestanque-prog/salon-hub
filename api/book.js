@@ -5,6 +5,7 @@
 import { admin } from './_lib/admin.js'
 import { userIdFrom } from './_lib/liff.js'
 import { pushText } from './_lib/line.js'
+import { getTemplates, applyTemplate } from './_lib/templates.js'
 import { staffFreeForMenu, pickBalancedStaffForMenu, workingStaffByRule, shopClosedReason } from '../src/utils.js'
 
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
@@ -76,7 +77,11 @@ export default async function handler(req, res) {
   // 本人のLINEへ自動送信
   const lineUserId = cust && (cust.integrations || {}).lineUserId
   if (lineUserId) {
-    await pushText(lineUserId, `${name}様、ご予約ありがとうございます！✂️\n\n📅 ${fmtDate(date)} ${startStr}〜\n💇 ${menu}\n👤 担当：${assigned}\n\nご来店をお待ちしております🌿`)
+    const salonName = settings.salonName || 'Hair Salon GRACE'
+    const text = applyTemplate(getTemplates(settings).bookingConfirm, {
+      customerName: name, salonName, date: fmtDate(date), time: startStr, menu, staff: assigned,
+    })
+    await pushText(lineUserId, text)
   }
 
   return res.status(200).json({ ok: true, reservation: { id, date, time: startStr, staff: assigned, menu, end: endStr } })
