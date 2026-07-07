@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { RES_SOURCE_META } from '../data/sampleData.js'
-import { TODAY_ISO, shopClosedReason, isStaffOff } from '../utils.js'
+import { TODAY_ISO, shopClosedReason, isStaffOff, IS_DEMO, resProgress } from '../utils.js'
 
 const HOURS = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
 const ROW_H = 56 // px per hour
@@ -225,10 +225,12 @@ export default function Timetable() {
                   const meta = RES_SOURCE_META[r.source] || RES_SOURCE_META.other
                   const lyt = layout[r.id] || { left: 0, width: 1 }
                   const split = lyt.width < 1 // 重なりで横分割中か
+                  // デモのみ：現在時刻から済/来店中/予定を動的判定（データは書き換えない）
+                  const prog = (IS_DEMO && !r.cancelled) ? resProgress(r, now) : null
                   return (
                     <div
                       key={r.id}
-                      className={'tt-appt' + (dragging ? ' dragging' : '') + (r.cancelled ? ' tt-appt-cancelled' : '')}
+                      className={'tt-appt' + (dragging ? ' dragging' : '') + (r.cancelled ? ' tt-appt-cancelled' : '') + (prog === 'done' ? ' tt-appt-done' : '')}
                       style={{ top: toY(sMin) + 2, height: toY(eMin) - toY(sMin) - 4, left: `calc(${lyt.left * 100}% + 3px)`, width: `calc(${lyt.width * 100}% - 6px)`, right: 'auto', background: r.cancelled ? '#f5f5f5' : meta.bg, borderLeftColor: r.cancelled ? '#ccc' : meta.bar }}
                       onPointerDown={(e) => onPointerDown(e, r)}
                       onPointerMove={onPointerMove}
@@ -236,7 +238,7 @@ export default function Timetable() {
                       onPointerCancel={onPointerCancel}
                     >
                       <b style={{ color: r.cancelled ? '#aaa' : undefined }}>{minToStr(sMin)}–{minToStr(eMin)}</b>
-                      <div className="nm" style={{ color: r.cancelled ? '#aaa' : undefined, textDecoration: r.cancelled ? 'line-through' : undefined }}>{r.customer || '（名前未入力）'}</div>
+                      <div className="nm" style={{ color: r.cancelled ? '#aaa' : undefined, textDecoration: r.cancelled ? 'line-through' : undefined }}>{r.customer || '（名前未入力）'}{prog === 'done' && <span className="tt-prog done">済</span>}{prog === 'now' && <span className="tt-prog now">来店中</span>}</div>
                       {r.cancelled ? <span style={{ fontSize: 10, color: '#d32f2f' }}>キャンセル</span> : !split && <div className="m">{r.menu}</div>}
                       {!r.cancelled && !split && <span className="tt-src" style={{ color: meta.color }}>{meta.short}</span>}
                     </div>

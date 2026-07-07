@@ -2,6 +2,27 @@
 export const TODAY = (() => { const d = new Date(); d.setHours(0,0,0,0); return d })()
 export const TODAY_ISO = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`
 
+// デモ環境判定：salopi.vercel.app または VITE_DEMO=1 のときだけ true。
+// 実サロンのfork版（別URL・VITE_DEMO未設定）では false ＝勝手な自動ステータスは付かない。
+export const IS_DEMO = (() => {
+  try {
+    if (import.meta.env && import.meta.env.VITE_DEMO === '1') return true
+    if (typeof window !== 'undefined' && /(^|\.)salopi\.vercel\.app$/i.test(window.location.hostname || '')) return true
+  } catch (e) {}
+  return false
+})()
+
+// 予約の進行状況を現在時刻から算出（デモ表示専用・データは書き換えない）
+// 戻り値: 'done'（来店済み）/ 'now'（来店中）/ 'upcoming'（来店予定）
+export function resProgress(r, now = new Date()) {
+  if (!r || !r.date) return 'upcoming'
+  const startAt = new Date(`${r.date}T${r.start || '00:00'}:00`)
+  const endAt = new Date(`${r.date}T${r.end || r.start || '00:00'}:00`)
+  if (now >= endAt) return 'done'
+  if (now >= startAt) return 'now'
+  return 'upcoming'
+}
+
 // Googleクチコミの状態を正規化（旧データの値も新3段階に寄せる）
 export function gReview(v) {
   if (v === '投稿済' || v === 'クチコミ投稿済') return '投稿済'

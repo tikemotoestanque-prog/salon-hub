@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { StatusBadge } from '../components/Badges.jsx'
 import { RES_SOURCE_META } from '../data/sampleData.js'
-import { yen, visitPrice, daysSince, TODAY, TODAY_ISO } from '../utils.js'
+import { yen, visitPrice, daysSince, TODAY, TODAY_ISO, IS_DEMO, resProgress } from '../utils.js'
 
 const WD = ['日', '月', '火', '水', '木', '金', '土']
 
@@ -193,14 +193,17 @@ export default function Dashboard() {
               <div style={{ color: 'var(--muted)', fontSize: 13 }}>本日の予約はありません</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {m.todayResList.map((r) => (
+                {m.todayResList.map((r) => {
+                  const prog = IS_DEMO ? resProgress(r) : null
+                  return (
                   <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', background: 'var(--bg)', borderRadius: 6, cursor: 'pointer' }} onClick={() => nav('/timetable')}>
                     <span style={{ fontWeight: 700, fontSize: 13, minWidth: 48 }}>{r.start}</span>
                     <span style={{ flex: 1, fontSize: 13 }}>{r.customer}</span>
                     <span style={{ fontSize: 12, color: 'var(--muted)' }}>{r.menu}</span>
                     <span style={{ fontSize: 12, color: 'var(--muted)' }}>{r.staff}</span>
+                    {prog && <span className={'res-chip res-chip-' + prog}>{prog === 'done' ? '✓ 済' : prog === 'now' ? '来店中' : '予定'}</span>}
                   </div>
-                ))}
+                )})}
               </div>
             )}
             <div className="mini-stats" style={{ marginTop: 12 }}>
