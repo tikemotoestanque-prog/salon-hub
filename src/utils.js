@@ -2,12 +2,12 @@
 export const TODAY = (() => { const d = new Date(); d.setHours(0,0,0,0); return d })()
 export const TODAY_ISO = `${TODAY.getFullYear()}-${String(TODAY.getMonth()+1).padStart(2,'0')}-${String(TODAY.getDate()).padStart(2,'0')}`
 
-// デモ環境判定：salopi.vercel.app または VITE_DEMO=1 のときだけ true。
+// デモ環境判定：okaeru-demo.vercel.app または VITE_DEMO=1 のときだけ true。
 // 実サロンのfork版（別URL・VITE_DEMO未設定）では false ＝勝手な自動ステータスは付かない。
 export const IS_DEMO = (() => {
   try {
     if (import.meta.env && import.meta.env.VITE_DEMO === '1') return true
-    if (typeof window !== 'undefined' && /(^|\.)salopi\.vercel\.app$/i.test(window.location.hostname || '')) return true
+    if (typeof window !== 'undefined' && /(^|\.)okaeru-demo\.vercel\.app$/i.test(window.location.hostname || '')) return true
   } catch (e) {}
   return false
 })()

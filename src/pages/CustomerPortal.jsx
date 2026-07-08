@@ -136,7 +136,7 @@ function Card({ c, rank, redemptions, onRedeem }) {
 
   // チェックイン用QR（スタッフがカメラで読み取る）
   useEffect(() => {
-    QRCode.toDataURL(`salopi-checkin:${c.id}`, { width: 240, margin: 1 })
+    QRCode.toDataURL(`okaeru-checkin:${c.id}`, { width: 240, margin: 1 })
       .then(setQrUrl).catch(() => setQrUrl(''))
   }, [c.id])
 

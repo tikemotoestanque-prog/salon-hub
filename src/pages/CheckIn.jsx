@@ -4,11 +4,11 @@ import jsQR from 'jsqr'
 import { useStore } from '../store.jsx'
 import { stampStatus, MILESTONE_COUPONS, TODAY_ISO } from '../utils.js'
 
-// QRテキストから顧客IDを取り出す（salopi-checkin:ID / .../u/ID / 生ID に対応）
+// QRテキストから顧客IDを取り出す（okaeru-checkin:ID / .../u/ID / 生ID に対応）
 function parseId(text) {
   if (!text) return null
   const t = text.trim()
-  const m = t.match(/salopi-checkin:(\S+)/i)
+  const m = t.match(/okaeru-checkin:(\S+)/i)
   if (m) return m[1]
   const um = t.match(/\/u\/([^/?#\s]+)/)
   if (um) return um[1]

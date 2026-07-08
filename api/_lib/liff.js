@@ -36,6 +36,6 @@ export async function userIdFrom(req) {
   return verifyToken(bearer(req))
 }
 
-// デモ閲覧を許可するか（salopiデモ環境のみ DEMO_MODE=1）。
+// デモ閲覧を許可するか（オカエルデモ環境のみ DEMO_MODE=1）。
 // 実サロンのfork版は未設定＝トークン必須で本人のみ。
 export const demoAllowed = process.env.DEMO_MODE === '1'
