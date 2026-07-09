@@ -1,21 +1,14 @@
 import { useState } from 'react'
 import { useStore } from '../store.jsx'
-
-// LINE自動送信の既定文面（api/_lib/templates.js の DEFAULT_TEMPLATES と揃える）。
-// プレースホルダ: {salonName} {customerName} {date} {time} {menu} {staff}
-const DEFAULT_LINE_TEMPLATES = {
-  greeting:
-    'ご登録ありがとうございます😊\n{salonName}です！\n\nご予約はメニューから24時間いつでもどうぞ。\nご相談もこのトークからお気軽に🌿',
-  bookingConfirm:
-    '{customerName}様、ご予約ありがとうございます！\n\n📅 {date} {time}〜\n📋 {menu}\n👤 担当：{staff}\n\nご来店をお待ちしております😊',
-  reminder:
-    '{customerName}様、明日のご来店リマインドです😊\n\n📅 {date} {time}〜\n📋 {menu}\n👤 担当：{staff}\n\nお気をつけてお越しください🌿',
-}
+import { DEFAULT_SALON_NAME, DEFAULT_INDUSTRY, DEFAULT_ICON_EMOJI, DEFAULT_ADDRESS, DEFAULT_LINE_TEMPLATES } from '../config/defaults.js'
 
 export default function Settings() {
   const { settings, updateSettings, recomputeAll } = useStore()
 
-  const [salonName, setSalonName] = useState(settings.salonName || 'Hair Salon GRACE')
+  const [salonName, setSalonName] = useState(settings.salonName || DEFAULT_SALON_NAME)
+  const [industry, setIndustry] = useState(settings.industry || DEFAULT_INDUSTRY)
+  const [iconEmoji, setIconEmoji] = useState(settings.iconEmoji || DEFAULT_ICON_EMOJI)
+  const [address, setAddress] = useState(settings.address || DEFAULT_ADDRESS)
   const [staff, setStaff] = useState(settings.staff)
   const [capacity, setCapacity] = useState(settings.capacity || {})
   const [menus, setMenus] = useState(settings.menus)
@@ -79,6 +72,9 @@ export default function Settings() {
     cleanStaff.forEach((s) => { if (staffOff[s]?.length) cleanOff[s] = staffOff[s] })
     updateSettings({
       salonName,
+      industry,
+      iconEmoji,
+      address,
       staff: cleanStaff,
       capacity: cap,
       menus: menus.map((s) => s.trim()).filter(Boolean),
@@ -112,12 +108,27 @@ export default function Settings() {
         {saved && <span className="save-flash">{saved}</span>}
       </div>
 
-      {/* サロン名 */}
+      {/* 店舗プロフィール */}
       <div className="card section">
-        <h3>🏠 サロン名</h3>
-        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--muted)' }}>顧客向けのWeb予約・マイページ画面に表示されるサロン名です。</p>
-        <div className="field" style={{ maxWidth: 360 }}>
-          <input value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder="Hair Salon GRACE" />
+        <h3>🏠 店舗プロフィール</h3>
+        <p style={{ margin: '0 0 12px', fontSize: 12, color: 'var(--muted)' }}>顧客向けのWeb予約・マイページ・LINE風プレビューに表示される基本情報です。</p>
+        <div className="form-grid">
+          <div className="field">
+            <label>店名</label>
+            <input value={salonName} onChange={(e) => setSalonName(e.target.value)} placeholder={DEFAULT_SALON_NAME} />
+          </div>
+          <div className="field">
+            <label>業種</label>
+            <input value={industry} onChange={(e) => setIndustry(e.target.value)} placeholder={DEFAULT_INDUSTRY} />
+          </div>
+          <div className="field">
+            <label>アイコン絵文字</label>
+            <input value={iconEmoji} onChange={(e) => setIconEmoji(e.target.value)} placeholder={DEFAULT_ICON_EMOJI} />
+          </div>
+          <div className="field full">
+            <label>住所</label>
+            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={DEFAULT_ADDRESS} />
+          </div>
         </div>
       </div>
 

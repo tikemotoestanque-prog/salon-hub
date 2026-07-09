@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { priceOf, yen } from '../utils.js'
+import { DEFAULT_SALON_NAME } from '../config/defaults.js'
 
 // メニュー名をカテゴリに振り分け（最初に当たったものを採用）
 const CATS = [
@@ -30,7 +31,7 @@ export default function MenuPage() {
       </div>
 
       <section className="ap-head">
-        <div className="lp-logo">{settings.salonName || 'Hair Salon GRACE'}</div>
+        <div className="lp-logo">{settings.salonName || DEFAULT_SALON_NAME}</div>
         <h1>メニュー & 料金</h1>
         <p>髪のお悩みに合わせて、最適なメニューをご提案します。</p>
       </section>

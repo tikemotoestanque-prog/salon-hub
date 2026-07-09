@@ -5,6 +5,7 @@ import { apiFetch } from '../lib/liff.js'
 import BookingForm from '../components/BookingForm.jsx'
 import QRCode from 'qrcode'
 import { daysSince, TODAY, TODAY_ISO, MILESTONE_COUPONS } from '../utils.js'
+import { DEFAULT_SALON_NAME } from '../config/defaults.js'
 
 export default function CustomerPortal() {
   const { id } = useParams()
@@ -38,12 +39,13 @@ export default function CustomerPortal() {
 
   const c = data.customer
   const rank = settings.statuses[c.status]?.label || '会員'
+  const salonName = settings.salonName || DEFAULT_SALON_NAME
 
   return (
     <div className="cp">
       <div className="cp-frame">
         <div className="cp-bar">
-          <span className="cp-salon">{settings.salonName || 'Hair Salon GRACE'}</span>
+          <span className="cp-salon">{salonName}</span>
           <span className="cp-user">{c.name} 様</span>
         </div>
 

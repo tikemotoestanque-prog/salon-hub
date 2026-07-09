@@ -7,6 +7,7 @@ import { userIdFrom } from './_lib/liff.js'
 import { pushText } from './_lib/line.js'
 import { getTemplates, applyTemplate } from './_lib/templates.js'
 import { staffFreeForMenu, pickBalancedStaffForMenu, workingStaffByRule, shopClosedReason } from '../src/utils.js'
+import { DEFAULT_SALON_NAME } from '../src/config/defaults.js'
 
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m }
 const minToStr = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
@@ -77,7 +78,7 @@ export default async function handler(req, res) {
   // 本人のLINEへ自動送信
   const lineUserId = cust && (cust.integrations || {}).lineUserId
   if (lineUserId) {
-    const salonName = settings.salonName || 'Hair Salon GRACE'
+    const salonName = settings.salonName || DEFAULT_SALON_NAME
     const text = applyTemplate(getTemplates(settings).bookingConfirm, {
       customerName: name, salonName, date: fmtDate(date), time: startStr, menu, staff: assigned,
     })
