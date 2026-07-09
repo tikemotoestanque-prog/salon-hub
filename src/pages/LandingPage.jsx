@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { priceOf, yen } from '../utils.js'
+import { DEFAULT_SALON_NAME } from '../config/defaults.js'
 
 const REVIEWS = [
   { n: '30代 女性', t: '担当の方が髪質をすごく覚えてくれていて、毎回安心してお任せできます。LINEで予約できるのもラク！' },
@@ -23,7 +24,7 @@ export default function LandingPage() {
       {/* HERO */}
       <section className="lp-hero">
         <div className="lp-hero-in">
-          <div className="lp-logo">{settings.salonName || 'Hair Salon GRACE'}</div>
+          <div className="lp-logo">{settings.salonName || DEFAULT_SALON_NAME}</div>
           <h1>あなたの「似合う」を、<br />ずっと覚えているサロン。</h1>
           <p>カルテ・薬剤レシピ・髪の悩みをすべて記録。次に来たときも、いつものあなたに最適な提案を。</p>
           <div className="lp-cta">

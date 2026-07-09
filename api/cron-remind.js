@@ -4,6 +4,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { getTemplates, applyTemplate } from './_lib/templates.js'
+import { DEFAULT_SALON_NAME } from '../src/config/defaults.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -41,7 +42,7 @@ export default async function handler(req, res) {
     supabase.from('settings').select('data').eq('id', 1).maybeSingle(),
   ])
   const settings = (setRow && setRow.data) || {}
-  const salonName = settings.salonName || 'Hair Salon GRACE'
+  const salonName = settings.salonName || DEFAULT_SALON_NAME
   const tmpl = getTemplates(settings)
 
   let sent = 0

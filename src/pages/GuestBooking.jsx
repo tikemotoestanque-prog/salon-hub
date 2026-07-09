@@ -1,14 +1,16 @@
 import { Link } from 'react-router-dom'
 import BookingForm from '../components/BookingForm.jsx'
 import { useStore } from '../store.jsx'
+import { DEFAULT_SALON_NAME } from '../config/defaults.js'
 
 export default function GuestBooking() {
   const { settings } = useStore()
+  const salonName = settings.salonName || DEFAULT_SALON_NAME
   return (
     <div className="cp">
       <div className="cp-frame">
         <div className="cp-bar">
-          <span className="cp-salon">{settings.salonName || 'Hair Salon GRACE'}</span>
+          <span className="cp-salon">{salonName}</span>
           <span className="cp-user">ご予約</span>
         </div>
         <div className="cp-body">

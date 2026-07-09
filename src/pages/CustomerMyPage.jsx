@@ -2,6 +2,8 @@ import { Fragment } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { daysSince, gReview, TODAY, TODAY_ISO } from '../utils.js'
+import { DEFAULT_SALON_NAME, DEFAULT_ICON_EMOJI } from '../config/defaults.js'
+import { getTemplates, applyTemplate } from '../lib/lineTemplates.js'
 
 const WD = ['日', '月', '火', '水', '木', '金', '土']
 const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
@@ -16,21 +18,34 @@ function firstName(name) {
 }
 
 // 顧客データから、お客さんのLINEに届くメッセージ群（送信日時つき）を組み立てる
-function buildMessages(c) {
+function buildMessages(c, settings) {
   const staff = c.assignedStaff || 'スタッフ'
   const days = daysSince(c.lastVisit)
   const menu = c.lastMenu || 'メニュー'
+  const salonName = settings.salonName || DEFAULT_SALON_NAME
+  const templates = getTemplates(settings)
   const msgs = []
 
   if (!c.history || c.history.length === 0) {
-    msgs.push({ date: c.lastVisit || TODAY_ISO, time: '12:05', title: '友だち追加あいさつ', text: `${c.name}様、友だち追加ありがとうございます！🌿\n当サロンの公式LINEです。\nご予約・ご相談はこのトークからお気軽にどうぞ😊` })
+    msgs.push({
+      date: c.lastVisit || TODAY_ISO,
+      time: '12:05',
+      title: '友だち追加あいさつ',
+      text: applyTemplate(templates.greeting, { customerName: c.name, salonName, date: c.lastVisit || TODAY_ISO, time: '12:05', menu, staff }),
+    })
   } else {
-    msgs.push({ date: c.lastVisit, time: '19:30', title: '来店当日サンクス', text: `${c.name}様、本日はご来店ありがとうございました！担当の${staff}です✂️\n「${menu}」の仕上がりはいかがでしたか？\n気になる点があればいつでもこちらからご相談くださいね😊` })
-    msgs.push({ date: addDays(c.lastVisit, 14), time: '10:00', title: '2週間後ホームケア案内', text: `その後、髪の調子はいかがですか？😌\n仕上がりを長持ちさせるホームケアのコツです🧴\n洗い流さないトリートメントを毛先中心になじませるのがおすすめですよ✨` })
+    msgs.push({ date: c.lastVisit, time: '19:30', title: '来店当日サンクス', text: `${c.name}様、本日はご来店ありがとうございました！担当の${staff}です。\n「${menu}」はいかがでしたか？\n気になる点があればいつでもこちらからご相談ください😊` })
+    msgs.push({ date: addDays(c.lastVisit, 14), time: '10:00', title: '2週間後フォロー', text: `その後のご様子はいかがですか？😌\n次回の目安やご相談があれば、このトークからお気軽にご連絡ください。` })
   }
 
   if (days != null && days >= 30) {
-    msgs.push({ date: addDays(c.lastVisit, 35), time: '11:00', title: '再来店リマインド', text: `${c.name}様、前回のご来店からそろそろ「${menu}」の時期です🗓\n下のメニューの「ご予約」からいつでもご予約いただけます💁‍♀️` })
+    const date = addDays(c.lastVisit, 35)
+    msgs.push({
+      date,
+      time: '11:00',
+      title: '再来店リマインド',
+      text: applyTemplate(templates.reminder, { customerName: c.name, salonName, date, time: '11:00', menu, staff }),
+    })
   }
 
   if (gReview(c.integrations?.google) === '依頼送信済') {
@@ -52,7 +67,7 @@ function buildMessages(c) {
 
 export default function CustomerMyPage() {
   const { id } = useParams()
-  const { customers } = useStore()
+  const { customers, settings } = useStore()
   const c = customers.find((x) => x.id === id)
 
   if (!c) {
@@ -64,7 +79,10 @@ export default function CustomerMyPage() {
     )
   }
 
-  const msgs = buildMessages(c)
+  const msgs = buildMessages(c, settings)
+  const salonName = settings.salonName || DEFAULT_SALON_NAME
+  const iconEmoji = settings.iconEmoji || DEFAULT_ICON_EMOJI
+  const lineName = `${salonName} 公式`
 
   return (
     <div>
@@ -78,7 +96,7 @@ export default function CustomerMyPage() {
 
       <div className="lineprev">
         <div className="phone">
-          <div className="lbar"><span className="back">‹</span><span>✂️ Hair Salon 公式</span></div>
+          <div className="lbar"><span className="back">‹</span><span>{iconEmoji} {lineName}</span></div>
           <div className="ltalk">
             {(() => {
               let prevDate = null
@@ -89,9 +107,9 @@ export default function CustomerMyPage() {
                   <Fragment key={i}>
                     {sep && <div className="ldate">{dateChip(m.date)}</div>}
                     <div className={'lmsg' + (m.future ? ' future' : '')}>
-                      <div className="lav">✂️</div>
+                      <div className="lav">{iconEmoji}</div>
                       <div className="lwrap">
-                        <div className="lname">Hair Salon 公式</div>
+                        <div className="lname">{lineName}</div>
                         <div className="lrow">
                           <div className={'lbub' + (m.future ? ' fut' : '')}>{m.text}</div>
                           <div className="ltime">
@@ -107,14 +125,14 @@ export default function CustomerMyPage() {
             })()}
 
             <div className="lmsg">
-              <div className="lav">✂️</div>
+              <div className="lav">{iconEmoji}</div>
               <div className="lcard">
                 <div className="hd">📋 {firstName(c.name)}様のマイカルテ</div>
                 <div className="bd">
                   <div className="r"><span>前回メニュー</span><b>{c.lastMenu || '-'}</b></div>
                   <div className="r"><span>前回ご来店</span><b>{c.lastVisit || '-'}</b></div>
                   <div className="r"><span>ご来店回数</span><b>{c.visitCount || 0}回</b></div>
-                  <div className="r"><span>次回おすすめ</span><b>{c.lastMenu || 'カット'}</b></div>
+                  <div className="r"><span>次回おすすめ</span><b>{c.lastMenu || 'メニュー'}</b></div>
                 </div>
                 <div className="cta">＋ このメニューで予約する</div>
               </div>

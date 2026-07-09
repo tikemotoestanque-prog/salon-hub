@@ -1,5 +1,6 @@
 // 初期サンプルデータ（5名分）。基準日: 2026-06-24
 // status: vip / regular / new / followup / dormant
+import { DEFAULT_INDUSTRY, DEFAULT_ICON_EMOJI, DEFAULT_ADDRESS } from '../config/defaults.js'
 
 export const STAFF = ['田中', '佐藤', '鈴木', '高橋']
 
@@ -56,6 +57,9 @@ export const DEFAULT_SETTINGS = {
   openTime: '10:00',   // 営業開始時間
   closeTime: '19:00',  // 営業終了時間
   salonName: 'Hair Salon GRACE', // サロン名（顧客向け画面に表示）
+  industry: DEFAULT_INDUSTRY, // 業種（fork先で設定画面から変更）
+  iconEmoji: DEFAULT_ICON_EMOJI, // LINE風プレビュー等で使う店舗アイコン
+  address: DEFAULT_ADDRESS, // 店舗住所（アクセス画面に表示）
 }
 
 // Googleクチコミ依頼の状態（未送信 → 依頼送信済 → 投稿済）

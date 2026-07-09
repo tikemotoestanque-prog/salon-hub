@@ -1,10 +1,13 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
+import { DEFAULT_SALON_NAME, DEFAULT_ADDRESS } from '../config/defaults.js'
 
 // LINEリッチメニューの「ACCESS」専用ページ。HP全体ではなく、店舗情報に直行する
 export default function AccessPage() {
   const { settings } = useStore()
   const nav = useNavigate()
+  const salonName = settings.salonName || DEFAULT_SALON_NAME
+  const address = settings.address || DEFAULT_ADDRESS
 
   return (
     <div className="lp">
@@ -14,7 +17,7 @@ export default function AccessPage() {
       </div>
 
       <section className="ap-head">
-        <div className="lp-logo">{settings.salonName || 'Hair Salon GRACE'}</div>
+        <div className="lp-logo">{salonName}</div>
         <h1>アクセス</h1>
         <p>ご来店ありがとうございます。道順・駐車場のご案内です。</p>
       </section>
@@ -25,14 +28,14 @@ export default function AccessPage() {
         <div className="ap-road ap-road-h" />
         <div className="ap-road ap-road-v" />
         <div className="ap-pin">📍</div>
-        <div className="ap-pin-label">{settings.salonName || 'Hair Salon GRACE'}</div>
+        <div className="ap-pin-label">{salonName}</div>
         <div className="ap-station">🚉 ○○駅</div>
         <span className="ap-map-note">※ デモ用の地図イメージです（実際はGoogleマップが入ります）</span>
       </div>
 
       <section className="lp-sec">
         <dl className="lp-info">
-          <dt>住所</dt><dd>〒000-0000 ○○県○○市○○ 1-2-3 GRACEビル 2F（デモ）</dd>
+          <dt>住所</dt><dd>{address}</dd>
           <dt>アクセス</dt><dd>○○線「○○駅」東口より徒歩5分</dd>
           <dt>駐車場</dt><dd>提携コインパーキングあり（2時間まで無料券をお渡しします）</dd>
           <dt>営業時間</dt><dd>10:00 – 20:00（最終受付 19:00）</dd>
