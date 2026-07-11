@@ -92,7 +92,7 @@ export default function Dashboard() {
           <h1>ダッシュボード</h1>
           <p>{TODAY_ISO}（{WD[today.getDay()]}）時点 / お店の今の数字をひと目で</p>
         </div>
-        <button className="btn ghost" onClick={() => nav('/lp')}>🌐 デモHPを見る</button>
+        <button className="btn ghost" onClick={() => nav('/lp')}>デモHPを見る</button>
       </div>
 
       <div className="kpi-row">
@@ -124,8 +124,8 @@ export default function Dashboard() {
           {/* 通知欄（最優先） */}
           <div className="card section">
             <h3>
-              🔔 お客様からの通知
-              {unreadCount > 0 && <span style={{ marginLeft: 8, background: '#d32f2f', color: '#fff', borderRadius: 10, padding: '2px 8px', fontSize: 12 }}>{unreadCount}件未読</span>}
+              <span>お客様からの通知</span>
+              {unreadCount > 0 && <span className="notice-count">{unreadCount}件未読</span>}
             </h3>
             <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>予約・LINEメッセージ・ブロックなど、対応が必要な通知がここに届きます。（30秒ごと自動更新）</p>
             {notifications.length === 0 ? (
@@ -170,7 +170,7 @@ export default function Dashboard() {
 
           {m.birthdayCustomers.length > 0 && (
             <div className="card section">
-              <h3>🎂 今月お誕生日のお客様（{m.birthdayCustomers.length}名）</h3>
+              <h3>今月お誕生日のお客様（{m.birthdayCustomers.length}名）</h3>
               <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>バースデークーポンやメッセージを送るチャンスです！</p>
               {m.birthdayCustomers.map((c) => (
                 <div key={c.id} className="target-row" onClick={() => nav('/customer/' + c.id)}>
@@ -188,7 +188,7 @@ export default function Dashboard() {
         {/* RIGHT */}
         <div>
           <div className="card section">
-            <h3>📅 本日の予約（{m.todayRes}件）</h3>
+            <h3>本日の予約（{m.todayRes}件）</h3>
             {m.todayResList.length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: 13 }}>本日の予約はありません</div>
             ) : (
@@ -214,7 +214,7 @@ export default function Dashboard() {
           </div>
 
           <div className="card section">
-            <h3>👥 顧客ステータス内訳</h3>
+            <h3>顧客ステータス内訳</h3>
             {Object.entries(settings.statuses).map(([k, meta]) => (
               <div className="bar-row" key={k}>
                 <span className="bar-name">{meta.icon} {meta.label}</span>
@@ -226,7 +226,7 @@ export default function Dashboard() {
           </div>
 
           <div className="card section">
-            <h3>📲 予約のLINE化率</h3>
+            <h3>予約のLINE化率</h3>
             <div className="line-rate">
               <div className="line-rate-num">{m.lineRate}<span>%</span></div>
               <div className="line-rate-cap">全予約のうち公式LINE経由の割合<br />（電話・HPBをLINEに寄せるほどコスト減＆囲い込み）</div>
@@ -241,7 +241,7 @@ export default function Dashboard() {
           </div>
 
           <div className="card section">
-            <h3>🎯 LINE未活用の優良客（友だち追加の誘導対象）</h3>
+            <h3>LINE未活用の優良客（友だち追加の誘導対象）</h3>
             <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>来店回数が多いのに公式LINE未連携の人。ここを友だち追加に繋げると、次回からLINEで自動リピート化できます。</p>
             {m.lineTargets.length === 0 ? (
               <div style={{ color: 'var(--muted)', fontSize: 13 }}>該当なし（みんなLINE連携済み）🎉</div>

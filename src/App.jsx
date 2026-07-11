@@ -19,6 +19,7 @@ import GuestBooking from './pages/GuestBooking.jsx'
 import AccessPage from './pages/AccessPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import LiffPage from './pages/LiffPage.jsx'
+import okaeruCharacter from './assets/okaeru-character.png'
 
 // お客様向け（管理画面のヘッダーを出さない独立ページ）
 const CUSTOMER_PREFIXES = ['/lp', '/u/', '/book', '/access', '/menu', '/liff']
@@ -70,25 +71,32 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="topbar">
-        <div className="brand">🐸 オカエル <small>顧客管理</small></div>
-        <nav className="nav">
-          <NavLink to="/" end>ダッシュボード</NavLink>
-          <NavLink to="/timetable">予約TT</NavLink>
-          <NavLink to="/checkin">チェックイン</NavLink>
-          <NavLink to="/customers">顧客一覧</NavLink>
-          <NavLink to="/alerts">フォロー漏れ</NavLink>
-          <NavLink to="/new">新規登録</NavLink>
-          <NavLink to="/settings">設定</NavLink>
-        </nav>
-        <span className="spacer" />
-{session && (
-          <button className="reset-btn" onClick={() => { if (confirm('ログアウトしますか？')) signOut() }} style={{ marginLeft: '0.5rem' }}>
-            ログアウト
-          </button>
-        )}
-      </header>
-      <main className="main">{routes}</main>
+      <div className="admin-shell">
+        <aside className="side-nav">
+          <div className="brand">
+            <img src={okaeruCharacter} alt="" className="brand-character" />
+            <span>
+              <span className="brand-mark">オカエル</span>
+              <small>顧客管理</small>
+            </span>
+          </div>
+          <nav className="nav">
+            <NavLink to="/" end>ダッシュボード</NavLink>
+            <NavLink to="/timetable">予約TT</NavLink>
+            <NavLink to="/checkin">チェックイン</NavLink>
+            <NavLink to="/customers">顧客一覧</NavLink>
+            <NavLink to="/alerts">フォロー漏れ</NavLink>
+            <NavLink to="/new">新規登録</NavLink>
+            <NavLink to="/settings">設定</NavLink>
+          </nav>
+          {session && (
+            <button className="reset-btn" onClick={() => { if (confirm('ログアウトしますか？')) signOut() }}>
+              ログアウト
+            </button>
+          )}
+        </aside>
+        <main className="main">{routes}</main>
+      </div>
     </div>
   )
 }
