@@ -301,6 +301,18 @@ export default function Settings() {
             onChange={(e) => setLineTemplates({ ...lineTemplates, reminder: e.target.value })}
             placeholder={DEFAULT_LINE_TEMPLATES.reminder} />
         </div>
+        <div className="field">
+          <label>誕生日のお祝い（使える項目：店名・お客様名／毎日自動判定して送信）</label>
+          <textarea rows={5} value={lineTemplates.birthday}
+            onChange={(e) => setLineTemplates({ ...lineTemplates, birthday: e.target.value })}
+            placeholder={DEFAULT_LINE_TEMPLATES.birthday} />
+        </div>
+        <div className="field">
+          <label>再来店のお声がけ（使える項目：店名・お客様名／フォロー漏れ画面から選んで送信）</label>
+          <textarea rows={5} value={lineTemplates.reengage}
+            onChange={(e) => setLineTemplates({ ...lineTemplates, reengage: e.target.value })}
+            placeholder={DEFAULT_LINE_TEMPLATES.reengage} />
+        </div>
       </div>
 
       <div className="form-actions" style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '12px 0' }}>

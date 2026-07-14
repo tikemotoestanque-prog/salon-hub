@@ -12,4 +12,8 @@ export const DEFAULT_LINE_TEMPLATES = {
     '{customerName}様、ご予約ありがとうございます！\n\n📅 {date} {time}〜\n📋 {menu}\n👤 担当：{staff}\n\nご来店をお待ちしております😊',
   reminder:
     '{customerName}様、明日のご来店リマインドです😊\n\n📅 {date} {time}〜\n📋 {menu}\n👤 担当：{staff}\n\nお気をつけてお越しください🌿',
+  birthday:
+    '{customerName}様、お誕生日おめでとうございます🎉\n\n{salonName}より、日頃の感謝を込めて。\nこの機会にぜひご来店ください🌿',
+  reengage:
+    '{customerName}様、ご無沙汰しております😊\n\n{salonName}です。お元気にお過ごしでしょうか？\nよろしければまたのご来店をお待ちしております🌿',
 }
