@@ -9,6 +9,8 @@ export function getTemplates(settings) {
     greeting: custom.greeting || DEFAULT_TEMPLATES.greeting,
     bookingConfirm: custom.bookingConfirm || DEFAULT_TEMPLATES.bookingConfirm,
     reminder: custom.reminder || DEFAULT_TEMPLATES.reminder,
+    birthday: custom.birthday || DEFAULT_TEMPLATES.birthday,
+    reengage: custom.reengage || DEFAULT_TEMPLATES.reengage,
   }
 }
 
