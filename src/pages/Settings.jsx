@@ -97,8 +97,8 @@ export default function Settings() {
     return statuses
   }
 
-  const save = () => { persist(); flash('保存しました ✓') }
-  const saveAndRecompute = () => { persist(); recomputeAll(); flash('保存し、全顧客のステータス・予約パターンを再判定しました ✓') }
+  // 保存のたびに全顧客のステータス・予約パターンも今の設定で判定し直す（既存データは壊さない安全な再計算）
+  const save = () => { persist(); recomputeAll(); flash('保存しました ✓') }
 
   return (
     <div>
@@ -322,10 +322,12 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="form-actions" style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '12px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button className="btn ghost" onClick={save}>保存する</button>
-        <button className="btn" onClick={saveAndRecompute}>保存＋全顧客を再判定</button>
-        {saved && <span className="save-flash">{saved}</span>}
+      <div className="form-actions" style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '12px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>保存すると、この内容で全顧客のステータス・予約パターンも自動的に判定し直されます。</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button className="btn" onClick={save}>保存する</button>
+          {saved && <span className="save-flash">{saved}</span>}
+        </div>
       </div>
     </div>
   )
