@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
-import { sampleCustomers, sampleReservations, DEFAULT_SETTINGS, SAMPLE_STAFF_OFF } from './data/sampleData.js'
+import { sampleCustomers, sampleReservations, sampleMessages, DEFAULT_SETTINGS, SAMPLE_STAFF_OFF } from './data/sampleData.js'
 import { computeStatus, computePattern, priceOf, TODAY_ISO } from './utils.js'
 import { supabase, hasSupabase } from './supabaseClient.js'
 import { useAuth } from './AuthContext.jsx'
@@ -15,7 +15,7 @@ const freshSettings = () => {
   }
   return s
 }
-const freshState = () => ({ customers: sampleCustomers, reservations: sampleReservations, settings: freshSettings(), couponRedemptions: [] })
+const freshState = () => ({ customers: sampleCustomers, reservations: sampleReservations, settings: freshSettings(), couponRedemptions: [], messages: sampleMessages })
 
 // ===== localStorage（Supabase未設定時のフォールバック） =====
 function loadLocal() {
@@ -29,6 +29,7 @@ function loadLocal() {
         // 旧データ（settings無し）でも既定値で動くようにマージ。staffOffは実行時生成を優先
         settings: { ...freshSettings(), ...(p.settings || {}), staffOff: SAMPLE_STAFF_OFF },
         couponRedemptions: p.couponRedemptions || [],
+        messages: p.messages || sampleMessages,
       }
     }
   } catch (e) { /* ignore */ }
@@ -66,11 +67,15 @@ const toResRow = (r) => ({
 })
 const fromRedemptionRow = (r) => ({ customerId: r.customer_id, tag: r.coupon_tag, usedAt: r.used_at, usedBy: r.used_by || '' })
 const toRedemptionRow = (x) => ({ customer_id: x.customerId, coupon_tag: x.tag, used_by: x.usedBy || null })
+const fromMessageRow = (r) => ({
+  id: r.id, customerId: r.customer_id, lineUserId: r.line_user_id, direction: r.direction,
+  text: r.text, sender: r.sender || '', read: !!r.read, createdAt: r.created_at,
+})
 
 export function StoreProvider({ children }) {
   const { session } = useAuth()
   const [state, setState] = useState(hasSupabase
-    ? { customers: [], reservations: [], settings: freshSettings(), couponRedemptions: [] }
+    ? { customers: [], reservations: [], settings: freshSettings(), couponRedemptions: [], messages: [] }
     : loadLocal)
   const [loading, setLoading] = useState(hasSupabase)
   const stateRef = useRef(state)
@@ -92,7 +97,7 @@ export function StoreProvider({ children }) {
 
         if (!session) {
           // 未ログイン（お客様ページ）：顧客・予約はロードしない
-          if (alive) setState({ customers: [], reservations: [], settings: baseSettings, couponRedemptions: [] })
+          if (alive) setState({ customers: [], reservations: [], settings: baseSettings, couponRedemptions: [], messages: [] })
           return
         }
 
@@ -116,12 +121,19 @@ export function StoreProvider({ children }) {
           const { data: red } = await supabase.from('coupon_redemptions').select('*')
           redemptions = (red || []).map(fromRedemptionRow)
         } catch (e) { /* テーブル未作成 = 空でOK */ }
+        // トーク画面のメッセージ履歴（テーブル未作成でも壊れないよう失敗許容）
+        let messages = []
+        try {
+          const { data: msgs } = await supabase.from('messages').select('*').order('created_at', { ascending: true })
+          messages = (msgs || []).map(fromMessageRow)
+        } catch (e) { /* テーブル未作成 = 空でOK */ }
         if (!alive) return
         setState({
           customers: (cust || []).map(fromCustomerRow),
           reservations: (res || []).map(fromResRow),
           settings: baseSettings,
           couponRedemptions: redemptions,
+          messages,
         })
       } catch (e) {
         console.error('Supabase load failed, falling back to local:', e)
@@ -138,6 +150,19 @@ export function StoreProvider({ children }) {
     if (hasSupabase) return
     try { localStorage.setItem(LS_KEY, JSON.stringify(state)) } catch (e) { /* ignore */ }
   }, [state])
+
+  // ----- トーク画面用：お客様からの新着メッセージを定期的に取り込む（15秒間隔） -----
+  useEffect(() => {
+    if (!hasSupabase || !session) return
+    let alive = true
+    const timer = setInterval(async () => {
+      try {
+        const { data } = await supabase.from('messages').select('*').order('created_at', { ascending: true })
+        if (alive && data) setState((s) => ({ ...s, messages: data.map(fromMessageRow) }))
+      } catch (e) { /* テーブル未作成等は無視 */ }
+    }, 15000)
+    return () => { alive = false; clearInterval(timer) }
+  }, [session])
 
   // ----- DB書き込みヘルパー（Supabase時のみ実行） -----
   const dbCustomer = (c) => { if (hasSupabase) supabase.from('customers').upsert(toCustomerRow(c)).then(({ error }) => error && console.error('customer upsert', error)) }
@@ -294,6 +319,43 @@ export function StoreProvider({ children }) {
     dbSettings(next)
   }
 
+  // トーク画面：スタッフから顧客へLINE返信（本番はAPI経由で送信、デモはローカルに追記のみ）
+  const sendMessage = async (customerId, text) => {
+    if (!hasSupabase) {
+      // デモモード：実際には送らず、会話上は送った体で見せる
+      const local = { id: 'm' + Date.now(), customerId, direction: 'out', text, sender: 'スタッフ(デモ)', read: true, createdAt: new Date().toISOString() }
+      setState((s) => ({ ...s, messages: [...s.messages, local] }))
+      return { ok: true }
+    }
+    try {
+      const res = await fetch('/api/send-line', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customerId, text }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) return { ok: false, error: data?.error }
+      // 送信成功：最新の会話を取り直して同期
+      const { data: msgs } = await supabase.from('messages').select('*').order('created_at', { ascending: true })
+      if (msgs) setState((s) => ({ ...s, messages: msgs.map(fromMessageRow) }))
+      return { ok: true }
+    } catch (e) {
+      return { ok: false, error: String(e) }
+    }
+  }
+
+  // トーク画面を開いたら、その顧客からの未読メッセージを既読にする
+  const markMessagesRead = (customerId) => {
+    setState((s) => ({
+      ...s,
+      messages: s.messages.map((m) => (m.customerId === customerId && m.direction === 'in' && !m.read) ? { ...m, read: true } : m),
+    }))
+    if (hasSupabase) {
+      supabase.from('messages').update({ read: true }).eq('customer_id', customerId).eq('direction', 'in').eq('read', false)
+        .then(({ error }) => error && console.error('message markRead', error))
+    }
+  }
+
   // 既存の全顧客のステータス・予約パターンを今の閾値で一括再計算
   const recomputeAll = () => {
     const next = stateRef.current.customers.map((c) => ({
@@ -321,7 +383,7 @@ export function StoreProvider({ children }) {
   }
 
   return (
-    <StoreContext.Provider value={{ ...state, loading, addCustomer, updateCustomer, addTreatment, checkIn, redeemCoupon, unredeemCoupon, addReservation, updateReservation, deleteReservation, cancelReservation, updateSettings, recomputeAll, resetData }}>
+    <StoreContext.Provider value={{ ...state, loading, addCustomer, updateCustomer, addTreatment, checkIn, redeemCoupon, unredeemCoupon, addReservation, updateReservation, deleteReservation, cancelReservation, updateSettings, recomputeAll, resetData, sendMessage, markMessagesRead }}>
       {children}
     </StoreContext.Provider>
   )

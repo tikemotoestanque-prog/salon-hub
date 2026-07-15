@@ -111,6 +111,16 @@ export default async function handler(req, res) {
       read: false,
       created_at: timestamp,
     })
+
+    // トーク画面用：会話履歴として保存（テーブル未作成でも通知側は壊れないよう失敗許容）
+    await supabase.from('messages').insert({
+      customer_id: customerId,
+      line_user_id: lineUserId,
+      direction: 'in',
+      text,
+      read: false,
+      created_at: timestamp,
+    }).then(({ error }) => error && console.error('message insert', error))
   }
 
   res.status(200).json({ ok: true })

@@ -596,3 +596,14 @@ const activeHandReservations = handReservations.filter((r) => !(SAMPLE_STAFF_OFF
 const baseReservations = [...activeHandReservations, ...genReservations(sampleCustomers, activeHandReservations)]
 const cycleReservations = genCycleReservations(sampleCustomers, baseReservations)
 export const sampleReservations = [...baseReservations, ...cycleReservations]
+
+// トーク画面のデモ用サンプル会話（LINE公式アカウントの受信・返信イメージ）
+const msg = (id, customerId, direction, text, createdAt, read = true) =>
+  ({ id, customerId, direction, text, sender: direction === 'out' ? 'スタッフ' : '', read, createdAt })
+export const sampleMessages = [
+  msg('m1', 'c001', 'in', '来週土曜の午前中でカラーの予約って空いてますか？', '2026-07-10T10:02:00+09:00'),
+  msg('m2', 'c001', 'out', '山田様、ご連絡ありがとうございます！来週土曜は10:30〜でしたらご案内可能です。', '2026-07-10T10:15:00+09:00'),
+  msg('m3', 'c001', 'in', 'それでお願いします！', '2026-07-10T10:16:00+09:00'),
+  msg('m4', 'c003', 'in', 'すみません、明日の予約なんですが体調不良でキャンセルさせてください🙏', '2026-07-13T08:40:00+09:00', false),
+  msg('m5', 'c005', 'in', '前回頼んだシャンプー、また買えますか？', '2026-07-14T19:20:00+09:00', false),
+]

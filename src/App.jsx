@@ -3,6 +3,7 @@ import { useStore } from './store.jsx'
 import { useAuth } from './AuthContext.jsx'
 import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
+import Talk from './pages/Talk.jsx'
 import CustomerList from './pages/CustomerList.jsx'
 import CustomerDetail from './pages/CustomerDetail.jsx'
 import Timetable from './pages/Timetable.jsx'
@@ -45,6 +46,8 @@ export default function App() {
   const routes = (
     <Routes>
       <Route path="/" element={<Dashboard />} />
+      <Route path="/talk" element={<Talk />} />
+      <Route path="/talk/:id" element={<Talk />} />
       <Route path="/customers" element={<CustomerList />} />
       <Route path="/customer/:id" element={<CustomerDetail />} />
       <Route path="/customer/:id/edit" element={<EditCustomer />} />
@@ -84,6 +87,7 @@ export default function App() {
           </div>
           <nav className="nav">
             <NavLink to="/" end>ダッシュボード</NavLink>
+            <NavLink to="/talk">トーク</NavLink>
             <NavLink to="/timetable">予約TT</NavLink>
             <NavLink to="/checkin">チェックイン</NavLink>
             <NavLink to="/customers">顧客一覧</NavLink>
