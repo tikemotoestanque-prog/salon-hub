@@ -322,9 +322,10 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="form-actions" style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '12px 0' }}>
+      <div className="form-actions" style={{ position: 'sticky', bottom: 0, background: 'var(--bg)', padding: '12px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
         <button className="btn ghost" onClick={save}>保存する</button>
         <button className="btn" onClick={saveAndRecompute}>保存＋全顧客を再判定</button>
+        {saved && <span className="save-flash">{saved}</span>}
       </div>
     </div>
   )
