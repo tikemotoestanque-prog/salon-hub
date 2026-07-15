@@ -3,6 +3,7 @@ import { sampleCustomers, sampleReservations, sampleMessages, DEFAULT_SETTINGS, 
 import { computeStatus, computePattern, priceOf, TODAY_ISO } from './utils.js'
 import { supabase, hasSupabase } from './supabaseClient.js'
 import { useAuth } from './AuthContext.jsx'
+import { useToast } from './components/Toast.jsx'
 
 const StoreContext = createContext(null)
 const LS_KEY = 'salonhub.v1'
@@ -74,6 +75,7 @@ const fromMessageRow = (r) => ({
 
 export function StoreProvider({ children }) {
   const { session } = useAuth()
+  const toast = useToast()
   const [state, setState] = useState(hasSupabase
     ? { customers: [], reservations: [], settings: freshSettings(), couponRedemptions: [], messages: [] }
     : loadLocal)
@@ -165,13 +167,14 @@ export function StoreProvider({ children }) {
   }, [session])
 
   // ----- DB書き込みヘルパー（Supabase時のみ実行） -----
-  const dbCustomer = (c) => { if (hasSupabase) supabase.from('customers').upsert(toCustomerRow(c)).then(({ error }) => error && console.error('customer upsert', error)) }
-  const dbCustomers = (list) => { if (hasSupabase) supabase.from('customers').upsert(list.map(toCustomerRow)).then(({ error }) => error && console.error('customers upsert', error)) }
-  const dbReservation = (r) => { if (hasSupabase) supabase.from('reservations').upsert(toResRow(r)).then(({ error }) => error && console.error('reservation upsert', error)) }
-  const dbDeleteReservation = (id) => { if (hasSupabase) supabase.from('reservations').delete().eq('id', id).then(({ error }) => error && console.error('reservation delete', error)) }
-  const dbSettings = (s) => { if (hasSupabase) supabase.from('settings').upsert({ id: 1, data: s, updated_at: new Date().toISOString() }).then(({ error }) => error && console.error('settings upsert', error)) }
-  const dbRedeem = (x) => { if (hasSupabase) supabase.from('coupon_redemptions').upsert(toRedemptionRow(x), { onConflict: 'customer_id,coupon_tag' }).then(({ error }) => error && console.error('redeem upsert', error)) }
-  const dbUnredeem = (customerId, tag) => { if (hasSupabase) supabase.from('coupon_redemptions').delete().eq('customer_id', customerId).eq('coupon_tag', tag).then(({ error }) => error && console.error('redeem delete', error)) }
+  // 画面上は保存できた体で進む（楽観的更新）が、実際の書き込みが失敗したらトーストで知らせる。
+  const dbCustomer = (c) => { if (hasSupabase) supabase.from('customers').upsert(toCustomerRow(c)).then(({ error }) => { if (error) { console.error('customer upsert', error); toast('顧客情報の保存に失敗しました。もう一度お試しください', 'error') } }) }
+  const dbCustomers = (list) => { if (hasSupabase) supabase.from('customers').upsert(list.map(toCustomerRow)).then(({ error }) => { if (error) { console.error('customers upsert', error); toast('一括更新に失敗しました', 'error') } }) }
+  const dbReservation = (r) => { if (hasSupabase) supabase.from('reservations').upsert(toResRow(r)).then(({ error }) => { if (error) { console.error('reservation upsert', error); toast('予約の保存に失敗しました', 'error') } }) }
+  const dbDeleteReservation = (id) => { if (hasSupabase) supabase.from('reservations').delete().eq('id', id).then(({ error }) => { if (error) { console.error('reservation delete', error); toast('予約の削除に失敗しました', 'error') } }) }
+  const dbSettings = (s) => { if (hasSupabase) supabase.from('settings').upsert({ id: 1, data: s, updated_at: new Date().toISOString() }).then(({ error }) => { if (error) { console.error('settings upsert', error); toast('設定の保存に失敗しました', 'error') } }) }
+  const dbRedeem = (x) => { if (hasSupabase) supabase.from('coupon_redemptions').upsert(toRedemptionRow(x), { onConflict: 'customer_id,coupon_tag' }).then(({ error }) => { if (error) { console.error('redeem upsert', error); toast('クーポンの処理に失敗しました', 'error') } }) }
+  const dbUnredeem = (customerId, tag) => { if (hasSupabase) supabase.from('coupon_redemptions').delete().eq('customer_id', customerId).eq('coupon_tag', tag).then(({ error }) => { if (error) { console.error('redeem delete', error); toast('クーポンの処理に失敗しました', 'error') } }) }
 
   // ----- ミューテーション（state更新＋DB書き込み） -----
   const addCustomer = (c) => {
@@ -200,13 +203,14 @@ export function StoreProvider({ children }) {
     }
     setState((s) => ({ ...s, customers: [newCustomer, ...s.customers] }))
     dbCustomer(newCustomer)
+    toast('顧客を登録しました')
     return id
   }
 
   const updateCustomer = (id, fields) => {
     const cur = stateRef.current.customers.find((c) => c.id === id)
     setState((s) => ({ ...s, customers: s.customers.map((c) => (c.id === id ? { ...c, ...fields } : c)) }))
-    if (cur) dbCustomer({ ...cur, ...fields })
+    if (cur) { dbCustomer({ ...cur, ...fields }); toast('保存しました') }
   }
 
   const addTreatment = (customerId, record) => {
@@ -232,6 +236,7 @@ export function StoreProvider({ children }) {
     updated.reservationPattern = computePattern(history)
     setState((s) => ({ ...s, customers: s.customers.map((x) => (x.id === customerId ? updated : x)) }))
     dbCustomer(updated)
+    toast('施術記録を保存しました')
   }
 
   // QRチェックイン：来店を1回カウントしてスタンプ・ステータスを更新
@@ -270,11 +275,13 @@ export function StoreProvider({ children }) {
     const entry = { customerId, tag, usedAt: new Date().toISOString(), usedBy }
     setState((s) => ({ ...s, couponRedemptions: [...s.couponRedemptions, entry] }))
     dbRedeem(entry)
+    toast('クーポンを使用済みにしました')
   }
   // 使用済みを取り消す（スタッフの消し込みミス用）
   const unredeemCoupon = (customerId, tag) => {
     setState((s) => ({ ...s, couponRedemptions: s.couponRedemptions.filter((r) => !(r.customerId === customerId && r.tag === tag)) }))
     dbUnredeem(customerId, tag)
+    toast('使用済みを取り消しました')
   }
 
   const addReservation = (r) => {
@@ -282,6 +289,7 @@ export function StoreProvider({ children }) {
     const newRes = { id, ...r }
     setState((s) => ({ ...s, reservations: [...s.reservations, newRes] }))
     dbReservation(newRes)
+    toast('予約を追加しました')
     // 予約通知をダッシュボードに記録
     if (hasSupabase) {
       const c = stateRef.current.customers.find((x) => x.id === r.customerId)
@@ -300,17 +308,22 @@ export function StoreProvider({ children }) {
   const updateReservation = (id, fields) => {
     const cur = stateRef.current.reservations.find((r) => r.id === id)
     setState((s) => ({ ...s, reservations: s.reservations.map((r) => (r.id === id ? { ...r, ...fields } : r)) }))
-    if (cur) dbReservation({ ...cur, ...fields })
+    if (cur) { dbReservation({ ...cur, ...fields }); toast('予約を保存しました') }
   }
 
   const deleteReservation = (id) => {
     setState((s) => ({ ...s, reservations: s.reservations.filter((r) => r.id !== id) }))
     dbDeleteReservation(id)
+    toast('予約を削除しました')
   }
 
   const cancelReservation = (id) => {
     setState((s) => ({ ...s, reservations: s.reservations.map((r) => r.id === id ? { ...r, cancelled: true } : r) }))
-    if (hasSupabase) supabase.from('reservations').update({ cancelled: true }).eq('id', id)
+    if (hasSupabase) {
+      supabase.from('reservations').update({ cancelled: true }).eq('id', id)
+        .then(({ error }) => { if (error) { console.error('reservation cancel', error); toast('予約キャンセルの保存に失敗しました', 'error') } })
+    }
+    toast('予約をキャンセルしました')
   }
 
   const updateSettings = (fields) => {
