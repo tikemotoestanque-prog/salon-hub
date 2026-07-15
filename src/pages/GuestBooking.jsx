@@ -23,6 +23,7 @@ export default function GuestBooking() {
       <div className="cp-note">
         ※ デモ予約です。確定するとお店の「予約タイムテーブル」に反映されます。
         <Link to="/lp" style={{ marginLeft: 8 }}>← HPに戻る</Link>
+        <Link to="/privacy" style={{ marginLeft: 8 }}>プライバシーポリシー</Link>
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { priceOf, yen } from '../utils.js'
-import { DEFAULT_SALON_NAME } from '../config/defaults.js'
+import { DEFAULT_SALON_NAME, DEFAULT_ADDRESS, DEFAULT_PHONE } from '../config/defaults.js'
 
 const REVIEWS = [
   { n: '30代 女性', t: '担当の方が髪質をすごく覚えてくれていて、毎回安心してお任せできます。LINEで予約できるのもラク！' },
@@ -86,8 +86,8 @@ export default function LandingPage() {
         <dl className="lp-info">
           <dt>営業時間</dt><dd>10:00 – 20:00（最終受付 19:00）</dd>
           <dt>定休日</dt><dd>毎週火曜日</dd>
-          <dt>住所</dt><dd>〒000-0000 ○○県○○市○○ 1-2-3（デモ）</dd>
-          <dt>TEL</dt><dd>03-1234-5678（デモ）</dd>
+          <dt>住所</dt><dd>{settings.address || DEFAULT_ADDRESS}</dd>
+          <dt>TEL</dt><dd>{settings.phone || DEFAULT_PHONE}</dd>
         </dl>
       </section>
 
@@ -96,6 +96,9 @@ export default function LandingPage() {
         <h2>ご予約はLINEがいちばん簡単です</h2>
         <p>友だち追加 → トークから予約 → 来店後はマイカルテとリマインドが自動で届きます。</p>
         <button className="lp-btn line big" onClick={() => nav('/book')}>📲 LINEで予約する</button>
+        <div style={{ marginTop: 18, fontSize: 12, opacity: 0.75 }}>
+          <Link to="/privacy" style={{ color: 'inherit' }}>プライバシーポリシー</Link>
+        </div>
       </section>
     </div>
   )
