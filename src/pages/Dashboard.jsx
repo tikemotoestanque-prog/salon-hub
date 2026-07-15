@@ -157,7 +157,11 @@ export default function Dashboard() {
                         {!n.read && (
                           <button onClick={() => markRead(n.id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #aaa', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#555' }}>既読にする</button>
                         )}
-                        {!isBlock && !isReservation && !isCheckin && !isNewCustomer && <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>}
+                        {!isBlock && !isReservation && !isCheckin && !isNewCustomer && (
+                          n.customer_id
+                            ? <button onClick={() => nav('/talk/' + n.customer_id)} style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755' }}>トークで返信 →</button>
+                            : <a href="https://chat.line.biz/account/@280vvwct" target="_blank" rel="noreferrer" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #06C755', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#06C755', textDecoration: 'none' }}>LINEで返信 →</a>
+                        )}
                         {isReservation && <a href="/timetable" style={{ fontSize: 11, padding: '2px 8px', border: '1px solid #2c5e3c', borderRadius: 4, background: 'none', cursor: 'pointer', color: '#2c5e3c', textDecoration: 'none' }}>予約TTを見る →</a>}
                         {(isCheckin || isNewCustomer) && n.customer_id && <button onClick={() => nav('/customer/' + n.customer_id)} style={{ fontSize: 11, padding: '2px 8px', border: `1px solid ${iconColor}`, borderRadius: 4, background: 'none', cursor: 'pointer', color: iconColor }}>カルテを見る →</button>}
                       </div>
