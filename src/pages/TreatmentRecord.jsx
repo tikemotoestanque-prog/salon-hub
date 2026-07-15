@@ -2,12 +2,14 @@ import { useState, useRef } from 'react'
 import { useParams, useNavigate, Link, Navigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { uploadPhoto } from '../supabaseClient.js'
+import { useToast } from '../components/Toast.jsx'
 import { TODAY_ISO } from '../utils.js'
 
 export default function TreatmentRecord() {
   const { id } = useParams()
   const { customers, addTreatment, settings } = useStore()
   const nav = useNavigate()
+  const toast = useToast()
   const customer = customers.find((c) => c.id === id)
 
   const [f, setF] = useState({
@@ -54,6 +56,8 @@ export default function TreatmentRecord() {
       uploadAll(photosBefore, 'before'),
       uploadAll(photosAfter, 'after'),
     ])
+    const failedCount = (photosBefore.length + photosAfter.length) - (before.length + after.length)
+    if (failedCount > 0) toast(`写真${failedCount}枚のアップロードに失敗しました（記録自体は保存します）`, 'error')
 
     addTreatment(customer.id, { ...f, photos: [...before, ...after] })
     setUploading(false)

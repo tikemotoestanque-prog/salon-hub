@@ -659,3 +659,22 @@ a { color: inherit; text-decoration: none; }
   .talk-list { max-height: 260px; }
   .talk-thread { min-height: 420px; }
 }
+
+/* ============ トースト通知（画面共通の保存・送信フィードバック） ============ */
+.toast-stack {
+  position: fixed; right: 20px; bottom: 20px; z-index: 999;
+  display: flex; flex-direction: column-reverse; gap: 8px; max-width: 340px;
+}
+.toast {
+  padding: 11px 16px; border-radius: 9px; font-size: 13.5px; font-weight: 600; cursor: pointer;
+  box-shadow: var(--shadow); animation: toast-in .2s ease-out;
+}
+.toast-success { background: #e2f7ea; color: #06713a; border: 1px solid #9fe0bd; }
+.toast-error { background: #fdeceb; color: #b23a2e; border: 1px solid #f0b3ab; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (max-width: 560px) {
+  .toast-stack { left: 12px; right: 12px; bottom: 12px; max-width: none; }
+}

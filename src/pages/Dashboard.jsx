@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { StatusBadge } from '../components/Badges.jsx'
 import { RES_SOURCE_META } from '../data/sampleData.js'
+import { useToast } from '../components/Toast.jsx'
 import { yen, visitPrice, daysSince, TODAY, TODAY_ISO, IS_DEMO, resProgress } from '../utils.js'
 
 const WD = ['日', '月', '火', '水', '木', '金', '土']
@@ -10,6 +11,7 @@ const WD = ['日', '月', '火', '水', '木', '金', '土']
 export default function Dashboard() {
   const { customers, reservations, settings } = useStore()
   const nav = useNavigate()
+  const toast = useToast()
   const [notifications, setNotifications] = useState([])
 
   const fetchNotifications = () => {
@@ -26,12 +28,17 @@ export default function Dashboard() {
   }, [])
 
   const markRead = async (id) => {
-    await fetch('/api/notifications', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
-    setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n))
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      if (!res.ok) throw new Error('failed')
+      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, read: true } : n))
+    } catch (e) {
+      toast('既読にできませんでした。もう一度お試しください', 'error')
+    }
   }
 
   const unreadCount = notifications.filter((n) => !n.read).length

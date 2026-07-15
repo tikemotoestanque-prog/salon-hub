@@ -6,10 +6,12 @@ import BookingForm from '../components/BookingForm.jsx'
 import QRCode from 'qrcode'
 import { daysSince, TODAY, TODAY_ISO, MILESTONE_COUPONS } from '../utils.js'
 import { DEFAULT_SALON_NAME } from '../config/defaults.js'
+import { useToast } from '../components/Toast.jsx'
 
 export default function CustomerPortal() {
   const { id } = useParams()
   const [params] = useSearchParams()
+  const toast = useToast()
   const { settings } = useStore() // 設定はPIIなし＝anonで参照可
   const [data, setData] = useState(undefined) // undefined=読込中, null=見つからず, object=本人データ
   const [tab, setTab] = useState(['karte', 'book', 'card'].includes(params.get('tab')) ? params.get('tab') : 'karte')
@@ -31,7 +33,9 @@ export default function CustomerPortal() {
   // 使用済みクーポンを本人として記録（取得済みデータも即時反映＝デモでも見た目が動く）
   const redeem = (tag) => {
     setData((d) => d ? { ...d, redemptions: [...d.redemptions, { customerId: d.customer.id, tag, usedBy: 'customer' }] } : d)
-    apiFetch('/api/redeem', { method: 'POST', body: JSON.stringify({ tag }) }).catch(() => {})
+    apiFetch('/api/redeem', { method: 'POST', body: JSON.stringify({ tag }) })
+      .then((res) => { if (!res.ok) throw new Error('failed') })
+      .catch(() => toast('クーポンの記録に失敗しました。スタッフにお声がけください', 'error'))
   }
 
   if (data === undefined) return <div className="empty" style={{ padding: 60, textAlign: 'center' }}>読み込み中…</div>
