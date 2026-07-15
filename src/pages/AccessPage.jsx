@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
-import { DEFAULT_SALON_NAME, DEFAULT_ADDRESS } from '../config/defaults.js'
+import { DEFAULT_SALON_NAME, DEFAULT_ADDRESS, DEFAULT_PHONE } from '../config/defaults.js'
 
 // LINEリッチメニューの「ACCESS」専用ページ。HP全体ではなく、店舗情報に直行する
 export default function AccessPage() {
@@ -8,6 +8,7 @@ export default function AccessPage() {
   const nav = useNavigate()
   const salonName = settings.salonName || DEFAULT_SALON_NAME
   const address = settings.address || DEFAULT_ADDRESS
+  const phone = settings.phone || DEFAULT_PHONE
 
   return (
     <div className="lp">
@@ -40,7 +41,7 @@ export default function AccessPage() {
           <dt>駐車場</dt><dd>提携コインパーキングあり（2時間まで無料券をお渡しします）</dd>
           <dt>営業時間</dt><dd>10:00 – 20:00（最終受付 19:00）</dd>
           <dt>定休日</dt><dd>毎週火曜日</dd>
-          <dt>TEL</dt><dd>03-1234-5678（デモ）</dd>
+          <dt>TEL</dt><dd>{phone}</dd>
         </dl>
       </section>
 

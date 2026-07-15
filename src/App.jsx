@@ -15,6 +15,7 @@ import TreatmentRecord from './pages/TreatmentRecord.jsx'
 import CheckIn from './pages/CheckIn.jsx'
 import Settings from './pages/Settings.jsx'
 import LandingPage from './pages/LandingPage.jsx'
+import PrivacyPolicy from './pages/PrivacyPolicy.jsx'
 import GuestBooking from './pages/GuestBooking.jsx'
 import AccessPage from './pages/AccessPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
@@ -22,7 +23,7 @@ import LiffPage from './pages/LiffPage.jsx'
 import okaeruCharacter from './assets/okaeru-character.png'
 
 // お客様向け（管理画面のヘッダーを出さない独立ページ）
-const CUSTOMER_PREFIXES = ['/lp', '/u/', '/book', '/access', '/menu', '/liff']
+const CUSTOMER_PREFIXES = ['/lp', '/u/', '/book', '/access', '/menu', '/liff', '/privacy']
 
 export default function App() {
   const { resetData } = useStore()
@@ -58,6 +59,7 @@ export default function App() {
       <Route path="/lp" element={<LandingPage />} />
       <Route path="/book" element={<GuestBooking />} />
       <Route path="/access" element={<AccessPage />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
       <Route path="/menu" element={<MenuPage />} />
       <Route path="/liff" element={<LiffPage />} />
       <Route path="*" element={<Navigate to="/" />} />

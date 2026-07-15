@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useStore } from '../store.jsx'
-import { DEFAULT_SALON_NAME, DEFAULT_INDUSTRY, DEFAULT_ICON_EMOJI, DEFAULT_ADDRESS, DEFAULT_LINE_TEMPLATES } from '../config/defaults.js'
+import { DEFAULT_SALON_NAME, DEFAULT_INDUSTRY, DEFAULT_ICON_EMOJI, DEFAULT_ADDRESS, DEFAULT_PHONE, DEFAULT_LINE_TEMPLATES } from '../config/defaults.js'
 
 export default function Settings() {
   const { settings, updateSettings, recomputeAll } = useStore()
@@ -9,6 +9,7 @@ export default function Settings() {
   const [industry, setIndustry] = useState(settings.industry || DEFAULT_INDUSTRY)
   const [iconEmoji, setIconEmoji] = useState(settings.iconEmoji || DEFAULT_ICON_EMOJI)
   const [address, setAddress] = useState(settings.address || DEFAULT_ADDRESS)
+  const [phone, setPhone] = useState(settings.phone || DEFAULT_PHONE)
   const [staff, setStaff] = useState(settings.staff)
   const [capacity, setCapacity] = useState(settings.capacity || {})
   const [menus, setMenus] = useState(settings.menus)
@@ -75,6 +76,7 @@ export default function Settings() {
       industry,
       iconEmoji,
       address,
+      phone,
       staff: cleanStaff,
       capacity: cap,
       menus: menus.map((s) => s.trim()).filter(Boolean),
@@ -129,7 +131,12 @@ export default function Settings() {
             <label>住所</label>
             <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder={DEFAULT_ADDRESS} />
           </div>
+          <div className="field">
+            <label>電話番号</label>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={DEFAULT_PHONE} />
+          </div>
         </div>
+        <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--muted)' }}>住所・電話番号は、アクセス画面とプライバシーポリシー（/privacy）にも表示されます。</p>
       </div>
 
       {/* しきい値 */}

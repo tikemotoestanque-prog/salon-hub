@@ -1,6 +1,6 @@
 // 初期サンプルデータ（5名分）。基準日: 2026-06-24
 // status: vip / regular / new / followup / dormant
-import { DEFAULT_INDUSTRY, DEFAULT_ICON_EMOJI, DEFAULT_ADDRESS } from '../config/defaults.js'
+import { DEFAULT_INDUSTRY, DEFAULT_ICON_EMOJI, DEFAULT_ADDRESS, DEFAULT_PHONE } from '../config/defaults.js'
 
 export const STAFF = ['田中', '佐藤', '鈴木', '高橋']
 
@@ -60,6 +60,7 @@ export const DEFAULT_SETTINGS = {
   industry: DEFAULT_INDUSTRY, // 業種（fork先で設定画面から変更）
   iconEmoji: DEFAULT_ICON_EMOJI, // LINE風プレビュー等で使う店舗アイコン
   address: DEFAULT_ADDRESS, // 店舗住所（アクセス画面に表示）
+  phone: DEFAULT_PHONE, // 店舗電話番号（アクセス画面・プライバシーポリシーに表示）
 }
 
 // Googleクチコミ依頼の状態（未送信 → 依頼送信済 → 投稿済）
