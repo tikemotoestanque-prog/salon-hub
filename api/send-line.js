@@ -46,17 +46,23 @@ async function handleBroadcast(req, res) {
   const tmpl = getTemplates(settings)
 
   let sent = 0
+  let demoSent = 0 // LINE未連携でも「選べる・送れる」を実感してもらうためのダミー送信数
   let skipped = 0
   for (const c of customers || []) {
     const lineUserId = c.integrations?.lineUserId
-    if (!lineUserId) { skipped++; continue }
     const text = applyTemplate(tmpl.reengage, { customerName: c.name, salonName })
+    if (!lineUserId) {
+      // LINE未連携：実送信はできないため、デモ送信として成功扱いにする（実際のLINE APIは呼ばない）
+      demoSent++
+      sent++
+      continue
+    }
     const result = await pushLine(lineUserId, [{ type: 'text', text }])
     if (result.ok) sent++
     else skipped++
   }
 
-  return res.status(200).json({ ok: true, sent, skipped, total: customerIds.length })
+  return res.status(200).json({ ok: true, sent, demoSent, skipped, total: customerIds.length })
 }
 
 async function handleSingle(req, res) {

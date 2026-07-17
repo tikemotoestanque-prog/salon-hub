@@ -28,7 +28,8 @@ export default function FollowUpAlerts() {
   }
 
   const lineReady = alerts.filter(({ c }) => c.integrations?.lineUserId)
-  const selectAll = () => setSelected(new Set(lineReady.map(({ c }) => c.id)))
+  // 全選択：LINE未連携の方も含めて全員選べる（未連携の方はデモ送信扱いになる）
+  const selectAll = () => setSelected(new Set(alerts.map(({ c }) => c.id)))
   const clearAll = () => setSelected(new Set())
 
   const sendToSelected = async () => {
@@ -43,7 +44,12 @@ export default function FollowUpAlerts() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data?.error || '送信に失敗しました')
-      setResult(`${data.sent}名に送信しました${data.skipped ? `（${data.skipped}名は未連携等でスキップ）` : ''} ✓`)
+      const demo = data.demoSent || 0
+      const real = (data.sent || 0) - demo
+      const parts = []
+      if (real > 0) parts.push(`${real}名に送信`)
+      if (demo > 0) parts.push(`${demo}名はLINE未連携のためデモ送信`)
+      setResult((parts.join('・') || `${data.sent}名に送信`) + ' ✓')
       setSelected(new Set())
     } catch (e) {
       setResult('送信エラー：' + (e.message || '不明なエラー'))
@@ -63,12 +69,17 @@ export default function FollowUpAlerts() {
 
       {alerts.length > 0 && (
         <div className="card section" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <button className="btn ghost sm" onClick={selectAll} disabled={lineReady.length === 0}>LINE連携済みを全選択（{lineReady.length}名）</button>
+          <button className="btn ghost sm" onClick={selectAll}>全選択（{alerts.length}名）</button>
           <button className="btn ghost sm" onClick={clearAll} disabled={selected.size === 0}>選択解除</button>
           <button className="btn" onClick={sendToSelected} disabled={selected.size === 0 || sending}>
             {sending ? '送信中…' : `選択した${selected.size}名にLINEで再来店のお声がけを送る`}
           </button>
           {result && <span className="save-flash">{result}</span>}
+          {lineReady.length < alerts.length && (
+            <div style={{ width: '100%', fontSize: 11.5, color: 'var(--muted)' }}>
+              ※ LINE未連携の方も選択できます。その場合は実際には送信されず、デモ送信として扱われます。
+            </div>
+          )}
         </div>
       )}
 
@@ -85,13 +96,12 @@ export default function FollowUpAlerts() {
             >
               <label
                 style={{ display: 'flex', alignItems: 'center', marginRight: 4 }}
-                title={hasLine ? '送信対象に選ぶ' : 'LINE未連携のため送信できません'}
+                title={hasLine ? '送信対象に選ぶ' : '送信対象に選ぶ（LINE未連携のためデモ送信）'}
                 onClick={(e) => e.stopPropagation()}
               >
                 <input
                   type="checkbox"
                   checked={selected.has(c.id)}
-                  disabled={!hasLine}
                   onChange={() => toggle(c.id)}
                 />
               </label>
