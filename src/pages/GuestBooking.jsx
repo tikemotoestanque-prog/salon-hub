@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import BookingForm from '../components/BookingForm.jsx'
 import { useStore } from '../store.jsx'
 import { DEFAULT_SALON_NAME } from '../config/defaults.js'
+import { IS_DEMO } from '../utils.js'
 
 export default function GuestBooking() {
   const { settings } = useStore()
@@ -21,8 +22,8 @@ export default function GuestBooking() {
         </div>
       </div>
       <div className="cp-note">
-        ※ デモ予約です。確定するとお店の「予約タイムテーブル」に反映されます。
-        <Link to="/lp" style={{ marginLeft: 8 }}>← HPに戻る</Link>
+        {IS_DEMO && <>※ デモ予約です。確定するとお店の「予約タイムテーブル」に反映されます。</>}
+        <Link to="/lp" style={{ marginLeft: IS_DEMO ? 8 : 0 }}>← HPに戻る</Link>
         <Link to="/privacy" style={{ marginLeft: 8 }}>プライバシーポリシー</Link>
       </div>
     </div>

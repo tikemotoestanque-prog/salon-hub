@@ -9,6 +9,11 @@ export default function AccessPage() {
   const salonName = settings.salonName || DEFAULT_SALON_NAME
   const address = settings.address || DEFAULT_ADDRESS
   const phone = settings.phone || DEFAULT_PHONE
+  // Googleマップの「埋め込みリンク」相当（APIキー不要のkeyless embed）。
+  // settings.addressが変われば自動でその住所の地図に切り替わるので、店ごとに埋め込みコードを作り直す必要がない。
+  const mapQuery = encodeURIComponent(`${salonName} ${address}`)
+  const mapEmbedSrc = `https://www.google.com/maps?q=${mapQuery}&output=embed`
+  const mapLinkHref = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`
 
   return (
     <div className="lp">
@@ -23,15 +28,22 @@ export default function AccessPage() {
         <p>ご来店ありがとうございます。道順・駐車場のご案内です。</p>
       </section>
 
-      {/* 地図（デモ表示） */}
+      {/* 地図（Googleマップ埋め込み。店名＋住所から自動生成、APIキー不要） */}
       <div className="ap-map">
-        <div className="ap-map-grid" />
-        <div className="ap-road ap-road-h" />
-        <div className="ap-road ap-road-v" />
-        <div className="ap-pin">📍</div>
-        <div className="ap-pin-label">{salonName}</div>
-        <div className="ap-station">🚉 ○○駅</div>
-        <span className="ap-map-note">※ デモ用の地図イメージです（実際はGoogleマップが入ります）</span>
+        <iframe
+          title={`${salonName}の地図`}
+          src={mapEmbedSrc}
+          width="100%"
+          height="100%"
+          style={{ border: 0, display: 'block' }}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
+      </div>
+      <div style={{ textAlign: 'center', marginTop: 10 }}>
+        <a href={mapLinkHref} target="_blank" rel="noopener noreferrer" style={{ fontSize: 13, color: '#5a5044', textDecoration: 'underline' }}>
+          📍 Googleマップで経路を見る
+        </a>
       </div>
 
       <section className="lp-sec">
