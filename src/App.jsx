@@ -8,6 +8,7 @@ import CustomerList from './pages/CustomerList.jsx'
 import CustomerDetail from './pages/CustomerDetail.jsx'
 import Timetable from './pages/Timetable.jsx'
 import FollowUpAlerts from './pages/FollowUpAlerts.jsx'
+import SalesLedger from './pages/SalesLedger.jsx'
 import NewCustomer from './pages/NewCustomer.jsx'
 import EditCustomer from './pages/EditCustomer.jsx'
 import CustomerMyPage from './pages/CustomerMyPage.jsx'
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/u/:id" element={<CustomerPortal />} />
       <Route path="/timetable" element={<Timetable />} />
       <Route path="/alerts" element={<FollowUpAlerts />} />
+      <Route path="/sales" element={<SalesLedger />} />
       <Route path="/new" element={<NewCustomer />} />
       <Route path="/record/:id" element={<TreatmentRecord />} />
       <Route path="/checkin" element={<CheckIn />} />
@@ -92,6 +94,7 @@ export default function App() {
             <NavLink to="/checkin">チェックイン</NavLink>
             <NavLink to="/customers">顧客一覧</NavLink>
             <NavLink to="/alerts">フォロー漏れ</NavLink>
+            <NavLink to="/sales">売上</NavLink>
             <NavLink to="/new">新規登録</NavLink>
             <NavLink to="/settings">設定</NavLink>
           </nav>

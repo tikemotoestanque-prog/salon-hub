@@ -17,4 +17,6 @@ export const DEFAULT_LINE_TEMPLATES = {
     '{customerName}様、お誕生日おめでとうございます🎉\n\n{salonName}より、日頃の感謝を込めて。\nこの機会にぜひご来店ください🌿',
   reengage:
     '{customerName}様、ご無沙汰しております😊\n\n{salonName}です。お元気にお過ごしでしょうか？\nよろしければまたのご来店をお待ちしております🌿',
+  revisitNudge:
+    '{customerName}様、そろそろ{menu}の頃合いかもしれません🌿\n\nご都合の良いタイミングで、ぜひまたお立ち寄りください。\n{salonName}スタッフ一同、お待ちしております😊',
 }

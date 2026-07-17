@@ -237,6 +237,24 @@ export function StoreProvider({ children }) {
     setState((s) => ({ ...s, customers: s.customers.map((x) => (x.id === customerId ? updated : x)) }))
     dbCustomer(updated)
     toast('施術記録を保存しました')
+
+    // 売上シート連携（設定されている場合のみ・ベストエフォート）
+    // 失敗しても施術記録の保存自体は止めない。売上データの正はオカエル本体（売上台帳）。
+    const sheetUrl = stateRef.current.settings.salesSheetUrl
+    if (sheetUrl) {
+      fetch(sheetUrl, {
+        method: 'POST',
+        mode: 'no-cors', // GAS WebアプリはCORSヘッダを返さないため（応答は読まず送信のみ行う）
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          日付: entry.date,
+          スタッフ: entry.staff || '',
+          メニュー: entry.menu || '',
+          金額: price,
+          顧客名: c.name || '',
+        }),
+      }).catch((e) => console.error('売上シート連携の送信に失敗', e))
+    }
   }
 
   // QRチェックイン：来店を1回カウントしてスタンプ・ステータスを更新

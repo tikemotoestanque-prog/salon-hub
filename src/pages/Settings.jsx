@@ -27,6 +27,7 @@ export default function Settings() {
     Object.entries(settings.statuses).map(([key, m]) => ({ key, ...m }))
   )
   const [lineTemplates, setLineTemplates] = useState({ ...DEFAULT_LINE_TEMPLATES, ...(settings.lineTemplates || {}) })
+  const [salesSheetUrl, setSalesSheetUrl] = useState(settings.salesSheetUrl || '')
   const [saved, setSaved] = useState('')
 
   const flash = (msg) => { setSaved(msg); setTimeout(() => setSaved(''), 2500) }
@@ -93,6 +94,7 @@ export default function Settings() {
       closedDates,
       staffOff: cleanOff,
       lineTemplates,
+      salesSheetUrl: salesSheetUrl.trim(),
     })
     return statuses
   }
@@ -319,6 +321,30 @@ export default function Settings() {
           <textarea rows={5} value={lineTemplates.reengage}
             onChange={(e) => setLineTemplates({ ...lineTemplates, reengage: e.target.value })}
             placeholder={DEFAULT_LINE_TEMPLATES.reengage} />
+        </div>
+        <div className="field">
+          <label>来店タイミングのご案内（使える項目：店名・お客様名・メニュー／その方の平均来店周期に合わせて自動送信）</label>
+          <textarea rows={5} value={lineTemplates.revisitNudge}
+            onChange={(e) => setLineTemplates({ ...lineTemplates, revisitNudge: e.target.value })}
+            placeholder={DEFAULT_LINE_TEMPLATES.revisitNudge} />
+        </div>
+      </div>
+
+      {/* 売上シート連携 */}
+      <div className="card section">
+        <h3>📊 売上シート連携（任意）</h3>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>
+          施術記録を保存するたびに、指定したGoogleスプレッドシートへ自動で1行追記します。
+          未設定でも売上台帳ページはそのまま使えます。設定方法は「オカエル_売上シート連携_設定手順.txt」を参照してください。
+        </p>
+        <div className="field">
+          <label>GAS WebアプリのURL</label>
+          <input
+            type="text"
+            value={salesSheetUrl}
+            onChange={(e) => setSalesSheetUrl(e.target.value)}
+            placeholder="https://script.google.com/macros/s/.../exec"
+          />
         </div>
       </div>
 
