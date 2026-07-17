@@ -287,13 +287,16 @@ export default function Timetable() {
           }}
           onOpenCard={(cid) => nav('/customer/' + cid)}
           onRegisterNew={(name) => nav('/new?name=' + encodeURIComponent(name))}
+          onRecordTreatment={(f) => nav(
+            `/record/${f.customerId}?date=${encodeURIComponent(f.date)}&staff=${encodeURIComponent(f.staff || '')}&menu=${encodeURIComponent(f.menu || '')}`
+          )}
         />
       )}
     </div>
   )
 }
 
-function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, onCancel, onOpenCard, onRegisterNew }) {
+function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, onCancel, onOpenCard, onRegisterNew, onRecordTreatment }) {
   const [f, setF] = useState(form)
   const [open, setOpen] = useState(false) // 候補リスト表示中
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }))
@@ -407,6 +410,9 @@ function ResModal({ form, customers, staff, menus, onClose, onSave, onDelete, on
           </div>
           {f.customerId && (
             <button className="link-btn" onClick={() => onOpenCard(f.customerId)}>📋 このお客様のカルテを開く →</button>
+          )}
+          {f.id && f.customerId && (
+            <button className="link-btn" onClick={() => onRecordTreatment(f)}>📷 この予約の施術記録をつける →</button>
           )}
         </div>
         <div className="modal-foot">

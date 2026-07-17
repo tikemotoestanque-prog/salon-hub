@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useParams, useNavigate, Link, Navigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link, Navigate } from 'react-router-dom'
 import { useStore } from '../store.jsx'
 import { uploadPhoto } from '../supabaseClient.js'
 import { useToast } from '../components/Toast.jsx'
@@ -10,16 +10,26 @@ export default function TreatmentRecord() {
   const { customers, addTreatment, settings } = useStore()
   const nav = useNavigate()
   const toast = useToast()
+  const [params] = useSearchParams()
   const customer = customers.find((c) => c.id === id)
 
+  // 予約タイムテーブルの「予約を編集」から遷移してきた場合、
+  // クエリパラメータ（?date=&staff=&menu=）で日付・スタッフ・メニューを引き継ぐ
+  const qDate = params.get('date')
+  const qStaff = params.get('staff')
+  const qMenu = params.get('menu')
+
   const [f, setF] = useState({
-    date: TODAY_ISO,
-    staff: customer?.assignedStaff || '',
-    menu: '',
+    date: qDate || TODAY_ISO,
+    staff: qStaff || customer?.assignedStaff || '',
+    menu: qMenu || '',
     price: '',
     note: '',
     recipe: '',
   })
+  // メニューが設定済み一覧に無い場合（予約から引き継いだ組み合わせメニュー等）は
+  // 最初から自由入力モードで表示する
+  const [customMenu, setCustomMenu] = useState(() => !!qMenu && !settings.menus.includes(qMenu))
   const [photosBefore, setPhotosBefore] = useState([]) // { file, preview }
   const [photosAfter, setPhotosAfter] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -89,8 +99,25 @@ export default function TreatmentRecord() {
           </div>
           <div className="field">
             <label>メニュー <span className="required">*</span></label>
-            <input list="rec-menu-suggest" value={f.menu} onChange={set('menu')} placeholder="カット + カラー + TR" required />
-            <datalist id="rec-menu-suggest">{settings.menus.map((m) => <option key={m} value={m} />)}</datalist>
+            {!customMenu ? (
+              <select
+                value={settings.menus.includes(f.menu) ? f.menu : ''}
+                onChange={(e) => {
+                  if (e.target.value === '__custom__') { setCustomMenu(true); setF((p) => ({ ...p, menu: '' })) }
+                  else setF((p) => ({ ...p, menu: e.target.value }))
+                }}
+                required
+              >
+                <option value="" disabled>選択してください</option>
+                {settings.menus.map((m) => <option key={m} value={m}>{m}</option>)}
+                <option value="__custom__">その他（自由入力・組み合わせメニュー）</option>
+              </select>
+            ) : (
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={f.menu} onChange={set('menu')} placeholder="例：カット + カラー + TR" required style={{ flex: 1 }} />
+                <button type="button" className="btn ghost sm" onClick={() => { setCustomMenu(false); setF((p) => ({ ...p, menu: '' })) }}>一覧から選ぶ</button>
+              </div>
+            )}
           </div>
           <div className="field">
             <label>金額（円・空欄ならメニューから概算）</label>
