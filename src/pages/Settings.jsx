@@ -56,6 +56,8 @@ export default function Settings() {
   })
   const [richMenuBusy, setRichMenuBusy] = useState(false)
   const [richMenuResult, setRichMenuResult] = useState(null)
+  const [lineHealth, setLineHealth] = useState(settings.lineHealth || null)
+  const [lineHealthBusy, setLineHealthBusy] = useState(false)
   const [saved, setSaved] = useState('')
 
   const flash = (msg) => { setSaved(msg); setTimeout(() => setSaved(''), 2500) }
@@ -180,6 +182,26 @@ export default function Settings() {
       flash('反映に失敗しました: ' + e.message)
     }
     setRichMenuBusy(false)
+  }
+
+  // --- LINE連携の健全性チェック（トークン失効・利用制限＝いわゆるBANの簡易検知） ---
+  const checkLineHealth = async () => {
+    setLineHealthBusy(true)
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ action: 'checkLineHealth' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'チェックに失敗しました')
+      setLineHealth(data.lineHealth)
+      updateSettings({ lineHealth: data.lineHealth })
+      flash(data.lineHealth?.ok ? 'LINE連携は正常です ✓' : 'LINE連携に問題がある可能性があります')
+    } catch (e) {
+      flash('チェックに失敗しました: ' + e.message)
+    }
+    setLineHealthBusy(false)
   }
 
   // --- statuses ---
@@ -611,6 +633,33 @@ export default function Settings() {
         })}
         <button type="button" className="btn ghost sm" disabled={richMenuBusy} onClick={syncRichMenus}>
           {richMenuBusy ? '反映中…' : 'LINEに反映する'}
+        </button>
+      </div>
+
+      {/* LINE連携の健全性チェック */}
+      <div className="card section">
+        <h3>🔌 LINE連携の状態</h3>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>
+          LINEチャンネルのアクセストークンが失効・利用制限（いわゆるBAN）されていないかを確認します。
+          毎朝の自動配信バッチのタイミングで自動チェックされますが、ここから今すぐ確認することもできます。
+        </p>
+        {lineHealth ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
+            <span className="badge" style={{ background: lineHealth.ok ? '#e6f4ea' : '#fdeaea', color: lineHealth.ok ? '#2e7d32' : '#d32f2f' }}>
+              {lineHealth.ok ? '✓ 正常' : '⚠️ 問題あり'}
+            </span>
+            <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+              最終確認: {lineHealth.lastCheckedAt ? new Date(lineHealth.lastCheckedAt).toLocaleString('ja-JP') : '未確認'}
+            </span>
+            {!lineHealth.ok && lineHealth.lastError && (
+              <span style={{ fontSize: 12, color: '#d32f2f' }}>理由: {lineHealth.lastError}</span>
+            )}
+          </div>
+        ) : (
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>まだ確認されていません。</div>
+        )}
+        <button type="button" className="btn ghost sm" disabled={lineHealthBusy} onClick={checkLineHealth}>
+          {lineHealthBusy ? '確認中…' : '🔍 今すぐ確認'}
         </button>
       </div>
 

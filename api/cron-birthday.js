@@ -1,10 +1,16 @@
-// 誕生日メッセージ ＋ 来店タイミング個別リマインド ＋ 日付起点リマインダー 自動配信 Cron関数
+// 誕生日メッセージ ＋ 来店タイミング個別リマインド ＋ 日付起点リマインダー
+// ＋ LINE連携の健全性チェック 自動配信 Cron関数
 // Vercel Cron: 毎日9:00 JST (= 00:00 UTC) に実行
 // vercel.json の crons に設定が必要
 //
 // ファイル名は cron-birthday のままだが、Vercel Hobbyプランのサーバーレス関数数
-// 12個の上限（send-line.jsの統合と同じ理由）のため、3種類の自動送信をこの1関数に
+// 12個の上限（send-line.jsの統合と同じ理由）のため、複数の自動処理をこの1関数に
 // まとめている。
+//
+// ⓪LINE連携の健全性チェック（2026-07-18d〜）：チャンネルアクセストークンの失効・
+//   利用制限（いわゆるBAN）を毎日1回、bot/info APIで確認しsettings.lineHealthに
+//   記録する。送信の有無に関わらず必ず毎日チェックされるよう、他の処理より先に実行。
+//   詳細は api/_lib/lineHealth.js 参照。
 //
 // ①誕生日：customers.birthday の月日が「今日」と一致する顧客へLINEでお祝いメッセージ。
 //   同じ年に二重送信しないよう、customers.integrations.lastBirthdaySentYear で判定・更新。
@@ -32,6 +38,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import { getTemplates, applyTemplate } from './_lib/templates.js'
+import { checkLineChannel, saveLineHealth } from './_lib/lineHealth.js'
 import { DEFAULT_SALON_NAME } from '../src/config/defaults.js'
 import { avgIntervalDays } from '../src/utils.js'
 
@@ -56,6 +63,10 @@ export default async function handler(req, res) {
   if (req.headers['authorization'] !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: 'Unauthorized' })
   }
+
+  // ⓪LINE連携の健全性チェック（他の処理より先に・送信の有無に関わらず毎日必ず実行）
+  const lineHealthResult = await checkLineChannel()
+  await saveLineHealth(supabase, lineHealthResult)
 
   const today = new Date()
   const todayISO = today.toISOString().slice(0, 10)
@@ -164,5 +175,5 @@ export default async function handler(req, res) {
     await supabase.from('customers').update({ integrations: { ...(c?.integrations || {}), ...patch } }).eq('id', id)
   }
 
-  return res.status(200).json({ ok: true, sent, revisitSent, dateReminderSent, date: todayISO })
+  return res.status(200).json({ ok: true, sent, revisitSent, dateReminderSent, lineHealthy: lineHealthResult.ok, date: todayISO })
 }

@@ -7,11 +7,17 @@
 // POST /api/notifications { action: 'linkRichMenu', customerId } → 顧客のステータスに応じた
 //   リッチメニューをそのLINEユーザーに紐付け（ログイン中なら誰でも呼べる。ステータス変更の
 //   たびにstore.jsxから自動で呼ばれる）
+// POST /api/notifications { action: 'checkLineHealth' } → LINE連携（トークンの失効・
+//   利用制限＝いわゆるBAN）を今すぐ手動チェック（オーナー権限のみ）
+// GET /api/notifications?health=1 → LINE連携の状態を返す軽量ステータスAPI（無認証・
+//   店名とLINE連携状態のみ。複数店舗を横断監視する別ツールから使う想定）
 //   Vercel Hobbyプランのサーバーレス関数数12個の上限のため、この既存ファイルに同居させている
 //   （send-line.js・cron-birthday.jsと同じ対策パターン）。
 
 import { createClient } from '@supabase/supabase-js'
 import { admin } from './_lib/admin.js'
+import { checkLineChannel, saveLineHealth } from './_lib/lineHealth.js'
+import { DEFAULT_SALON_NAME } from '../src/config/defaults.js'
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
@@ -197,6 +203,15 @@ async function handleRichMenuLink(req, res) {
   return res.status(200).json({ ok: true })
 }
 
+// LINE連携の健全性を今すぐ手動チェック（設定画面の「🔍 今すぐ確認」ボタンから）
+async function handleCheckLineHealth(req, res) {
+  const caller = await requireOwner(req)
+  if (!caller) return res.status(403).json({ error: 'オーナー権限が必要です' })
+  const result = await checkLineChannel()
+  const saved = await saveLineHealth(supabase, result)
+  return res.status(200).json({ ok: true, lineHealth: saved || result })
+}
+
 async function handleStaffAction(req, res) {
   const { action } = req.body || {}
   const caller = await requireOwner(req)
@@ -240,6 +255,19 @@ async function handleStaffAction(req, res) {
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
+    // 軽量ステータスAPI（無認証）。複数店舗を横断監視する別ツールから使う想定で、
+    // 店名とLINE連携状態のみを返す（顧客データ等の機微な情報は含めない）。
+    if (req.query?.health === '1') {
+      const { data: setRow, error } = await supabase.from('settings').select('data').eq('id', 1).maybeSingle()
+      if (error) return res.status(500).json({ error: error.message })
+      const settings = (setRow && setRow.data) || {}
+      return res.status(200).json({
+        ok: true,
+        salonName: settings.salonName || DEFAULT_SALON_NAME,
+        lineHealth: settings.lineHealth || null,
+      })
+    }
+
     const { data, error } = await supabase
       .from('notifications')
       .select('*')
@@ -252,6 +280,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
     if (req.body?.action === 'syncRichMenus') return handleRichMenuSync(req, res)
     if (req.body?.action === 'linkRichMenu') return handleRichMenuLink(req, res)
+    if (req.body?.action === 'checkLineHealth') return handleCheckLineHealth(req, res)
     if (req.body?.action) return handleStaffAction(req, res)
     const { id } = req.body
     if (!id) return res.status(400).json({ error: 'id required' })

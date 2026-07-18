@@ -139,6 +139,20 @@ export default function Dashboard() {
       <div className="dash-grid">
         {/* LEFT */}
         <div>
+          {/* LINE連携の問題アラート（トークン失効・利用制限＝いわゆるBAN検知） */}
+          {settings.lineHealth && settings.lineHealth.ok === false && (
+            <div className="card section" style={{ background: '#fdeaea', border: '1px solid #ef9a9a' }}>
+              <h3>⚠️ LINE連携に問題が発生している可能性があります</h3>
+              <p style={{ margin: '0 0 6px', fontSize: 13, color: '#b71c1c' }}>{settings.lineHealth.lastError || '原因不明のエラー'}</p>
+              <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>
+                最終確認：{settings.lineHealth.lastCheckedAt ? new Date(settings.lineHealth.lastCheckedAt).toLocaleString('ja-JP') : '-'}
+                （連続{settings.lineHealth.consecutiveFailures || 0}回失敗）。
+                LINE Official Account Managerでチャンネルの状態をご確認ください。
+              </p>
+              <Link className="link-btn" to="/settings">設定画面で確認する →</Link>
+            </div>
+          )}
+
           {/* 施術記録もれアラート */}
           {m.unrecorded.length > 0 && (
             <div className="card section" style={{ background: '#fff8f0', border: '1px solid #f0c987' }}>
