@@ -10,7 +10,7 @@ const STEP_CLASS = { '配信済': 's-done', '予約': 's-sched', '未配信': 's
 export default function CustomerDetail() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { customers, updateCustomer, couponRedemptions, redeemCoupon, unredeemCoupon } = useStore()
+  const { customers, updateCustomer, couponRedemptions, redeemCoupon, unredeemCoupon, settings } = useStore()
   const c = customers.find((x) => x.id === id)
 
   if (!c) {
@@ -33,6 +33,16 @@ export default function CustomerDetail() {
   const gStatus = gReview(c.integrations?.google)
   const gMeta = G_REVIEW_META[gStatus]
   const setG = (status) => updateCustomer(c.id, { integrations: { ...c.integrations, google: status, googleDate: TODAY_ISO } })
+
+  const [newTag, setNewTag] = useState('')
+  const addTag = (tag) => {
+    const v = (tag ?? newTag).trim()
+    if (!v || (c.tags || []).includes(v)) return
+    updateCustomer(c.id, { tags: [...(c.tags || []), v] })
+    setNewTag('')
+  }
+  const removeTag = (tag) => updateCustomer(c.id, { tags: (c.tags || []).filter((t) => t !== tag) })
+  const tagCandidates = (settings.tags || []).filter((t) => !(c.tags || []).includes(t))
 
   const [lineIdInput, setLineIdInput] = useState('')
   const [lineIdEditing, setLineIdEditing] = useState(false)
@@ -100,6 +110,34 @@ export default function CustomerDetail() {
                 {c.allergies.map((a, i) => <span key={i} className="pill warn">{a}</span>)}
               </div>
             ) : <div style={{ color: 'var(--muted)', fontSize: 13 }}>申告なし</div>}
+          </div>
+
+          <div className="card section">
+            <h3>🏷 タグ</h3>
+            {c.tags && c.tags.length > 0 ? (
+              <div className="chip-row" style={{ marginBottom: 10 }}>
+                {c.tags.map((t) => (
+                  <span className="tag-chip" key={t}>{t}<button onClick={() => removeTag(t)}>×</button></span>
+                ))}
+              </div>
+            ) : <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 10 }}>タグなし</div>}
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              {tagCandidates.length > 0 && (
+                <select value="" onChange={(e) => { if (e.target.value) addTag(e.target.value) }} style={{ maxWidth: 160 }}>
+                  <option value="">候補から選ぶ</option>
+                  {tagCandidates.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              )}
+              <input
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag() } }}
+                placeholder="新しいタグ"
+                style={{ width: 120 }}
+              />
+              <button className="btn ghost sm" onClick={() => addTag()} disabled={!newTag.trim()}>＋ 追加</button>
+            </div>
+            <p style={{ margin: '8px 0 0', fontSize: 11.5, color: 'var(--muted)' }}>タグの候補は設定画面で管理できます。</p>
           </div>
 
           <div className="card section">

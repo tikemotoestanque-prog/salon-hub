@@ -12,11 +12,13 @@ export default function FollowUpAlerts() {
   const [selected, setSelected] = useState(() => new Set())
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState('')
+  const [tagFilter, setTagFilter] = useState('all')
 
-  const alerts = customers
+  const allAlerts = customers
     .map((c) => ({ c, days: daysSince(c.lastVisit) }))
     .filter((x) => x.days != null && x.days >= THRESHOLD)
     .sort((a, b) => b.days - a.days)
+  const alerts = tagFilter === 'all' ? allAlerts : allAlerts.filter(({ c }) => (c.tags || []).includes(tagFilter))
 
   const toggle = (id) => {
     setSelected((prev) => {
@@ -63,8 +65,18 @@ export default function FollowUpAlerts() {
       <div className="page-head">
         <div>
           <h1>フォロー漏れアラート</h1>
-          <p>最終来店から {THRESHOLD} 日以上経過した顧客：{alerts.length} 名（設定の「要フォローにする未来店日数」で変更できます）</p>
+          <p>
+            最終来店から {THRESHOLD} 日以上経過した顧客：{allAlerts.length} 名
+            {tagFilter !== 'all' && <>（「{tagFilter}」タグで絞り込み中：{alerts.length} 名）</>}
+            （設定の「要フォローにする未来店日数」で変更できます）
+          </p>
         </div>
+        {settings.tags && settings.tags.length > 0 && (
+          <select value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); setSelected(new Set()) }}>
+            <option value="all">すべてのタグ</option>
+            {settings.tags.map((t) => <option key={t} value={t}>🏷 {t}</option>)}
+          </select>
+        )}
       </div>
 
       {alerts.length > 0 && (
@@ -117,6 +129,7 @@ export default function FollowUpAlerts() {
                   <SourceBadge source={c.source} />
                   <span className="pill">{c.phone}</span>
                   {!hasLine && <span className="pill" style={{ color: 'var(--muted)' }}>LINE未連携</span>}
+                  {(c.tags || []).map((t) => <span key={t} className="pill" style={{ background: '#e7f2ea', color: '#2f6b46', borderColor: '#bfe0cb' }}>🏷 {t}</span>)}
                 </div>
               </div>
               <button className="btn ghost" onClick={() => nav('/customer/' + c.id)}>詳細</button>

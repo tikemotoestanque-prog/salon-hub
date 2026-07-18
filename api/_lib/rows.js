@@ -9,7 +9,7 @@ export const fromCustomerRow = (r) => ({
   hair: r.hair || {}, allergies: r.allergies || [],
   reservationPattern: r.reservation_pattern || '',
   integrations: r.integrations || {}, stepDelivery: r.step_delivery || [],
-  history: r.history || [],
+  history: r.history || [], tags: r.tags || [],
 })
 
 export const toCustomerRow = (c) => ({
@@ -20,7 +20,7 @@ export const toCustomerRow = (c) => ({
   hair: c.hair || {}, allergies: c.allergies || [],
   reservation_pattern: c.reservationPattern || null,
   integrations: c.integrations || {}, step_delivery: c.stepDelivery || [],
-  history: c.history || [],
+  history: c.history || [], tags: c.tags || [],
 })
 
 export const fromResRow = (r) => ({

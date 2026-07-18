@@ -30,6 +30,7 @@ export default function Settings() {
   )
   const [lineTemplates, setLineTemplates] = useState({ ...DEFAULT_LINE_TEMPLATES, ...(settings.lineTemplates || {}) })
   const [keywordReplies, setKeywordReplies] = useState(settings.keywordReplies || [])
+  const [tagList, setTagList] = useState(settings.tags || [])
   const [salesSheetUrl, setSalesSheetUrl] = useState(settings.salesSheetUrl || '')
   const [saved, setSaved] = useState('')
 
@@ -61,6 +62,11 @@ export default function Settings() {
   }
   const delStaffOff = (s, d) => setStaffOff({ ...staffOff, [s]: (staffOff[s] || []).filter((x) => x !== d) })
   const fmtMD = (iso) => { const dt = new Date(iso + 'T00:00:00'); return `${dt.getMonth() + 1}/${dt.getDate()}（${WD[dt.getDay()]}）` }
+
+  // --- tags ---
+  const setTagAt = (i, v) => setTagList(tagList.map((s, idx) => (idx === i ? v : s)))
+  const addTagCandidate = () => setTagList([...tagList, ''])
+  const delTagCandidate = (i) => setTagList(tagList.filter((_, idx) => idx !== i))
 
   // --- keyword replies ---
   const setKeywordReplyAt = (i, k, v) => setKeywordReplies(keywordReplies.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)))
@@ -107,6 +113,7 @@ export default function Settings() {
       keywordReplies: keywordReplies
         .map((r) => ({ keyword: (r.keyword || '').trim(), reply: (r.reply || '').trim() }))
         .filter((r) => r.keyword && r.reply),
+      tags: [...new Set(tagList.map((t) => t.trim()).filter(Boolean))],
       salesSheetUrl: salesSheetUrl.trim(),
     })
     return statuses
@@ -304,6 +311,22 @@ export default function Settings() {
           </div>
         ))}
         <button className="btn ghost sm" onClick={addStatus}>＋ ステータスを追加</button>
+      </div>
+
+      {/* タグ候補 */}
+      <div className="card section">
+        <h3>🏷 タグ候補</h3>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>
+          ステータス（新規/常連/VIP等）とは別に、顧客に自由に付けられるタグの候補です。
+          顧客詳細画面でここから選んで付けられ、顧客一覧・フォロー漏れ画面の絞り込みにも使えます（例：メンズ、ブリーチ毎回、紹介経由）。
+        </p>
+        {tagList.map((t, i) => (
+          <div className="row-edit" key={i} style={{ gap: 6 }}>
+            <input value={t} onChange={(e) => setTagAt(i, e.target.value)} placeholder="タグ名" style={{ flex: 1 }} />
+            <button className="btn ghost danger sm" onClick={() => delTagCandidate(i)}>×</button>
+          </div>
+        ))}
+        <button className="btn ghost sm" onClick={addTagCandidate}>＋ タグ候補を追加</button>
       </div>
 
       {/* LINE自動送信の文面 */}
