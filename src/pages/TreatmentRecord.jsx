@@ -40,6 +40,7 @@ export default function TreatmentRecord() {
   ])
   const [photosBefore, setPhotosBefore] = useState([]) // { file, preview }
   const [photosAfter, setPhotosAfter] = useState([])
+  const [snsConsent, setSnsConsent] = useState(false) // SNS掲載に同意（任意）
   const [uploading, setUploading] = useState(false)
   const beforeRef = useRef()
   const afterRef = useRef()
@@ -90,12 +91,12 @@ export default function TreatmentRecord() {
     if (!finalMenu) { toast('メニューを選択してください', 'error'); return }
     setUploading(true)
 
-    // 写真をアップロード
+    // 写真をアップロード（SNS掲載同意チェックの状態を写真のメタデータとして一緒に保存する）
     const uploadAll = async (items, tag) => {
       const urls = []
       for (const item of items) {
         const url = await uploadPhoto(item.file, customer.id)
-        if (url) urls.push({ url, tag })
+        if (url) urls.push({ url, tag, snsConsent })
       }
       return urls
     }
@@ -191,6 +192,14 @@ export default function TreatmentRecord() {
             <PhotoZone label="施術前" items={photosBefore} onAdd={(files) => addFiles(files, setPhotosBefore)} onRemove={(i) => removePhoto(i, setPhotosBefore)} inputRef={beforeRef} />
             <PhotoZone label="施術後" items={photosAfter} onAdd={(files) => addFiles(files, setPhotosAfter)} onRemove={(i) => removePhoto(i, setPhotosAfter)} inputRef={afterRef} />
           </div>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 12, fontSize: 13, cursor: 'pointer' }}>
+            <input type="checkbox" checked={snsConsent} onChange={(e) => setSnsConsent(e.target.checked)} style={{ marginTop: 2 }} />
+            <span>
+              📸 この写真をSNS（Instagram等）に掲載することについて、お客様の同意を得ています（任意）
+              <br />
+              <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>チェックした写真だけが「SNS素材」ギャラリーに表示されます。未チェックの写真は掲載対象になりません。</span>
+            </span>
+          </label>
           <ShareBothButton photosBefore={photosBefore} photosAfter={photosAfter} caption={menuRows.map((r) => r.value.trim()).filter(Boolean).join(' + ')} />
         </div>
 

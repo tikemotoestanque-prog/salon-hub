@@ -22,6 +22,7 @@ import GuestBooking from './pages/GuestBooking.jsx'
 import AccessPage from './pages/AccessPage.jsx'
 import MenuPage from './pages/MenuPage.jsx'
 import LiffPage from './pages/LiffPage.jsx'
+import SnsGallery from './pages/SnsGallery.jsx'
 import okaeruCharacter from './assets/okaeru-character.png'
 
 // お客様向け（管理画面のヘッダーを出さない独立ページ）
@@ -64,6 +65,7 @@ export default function App() {
       <Route path="/u/:id" element={<CustomerPortal />} />
       <Route path="/timetable" element={<Timetable />} />
       <Route path="/alerts" element={<FollowUpAlerts />} />
+      <Route path="/sns-gallery" element={<SnsGallery />} />
       <Route path="/sales" element={<SalesLedger />} />
       <Route path="/new" element={<NewCustomer />} />
       <Route path="/record/:id" element={<TreatmentRecord />} />
@@ -102,6 +104,7 @@ export default function App() {
             <NavLink to="/checkin">チェックイン</NavLink>
             <NavLink to="/customers">顧客一覧</NavLink>
             <NavLink to="/alerts">フォロー漏れ</NavLink>
+            <NavLink to="/sns-gallery">📸 SNS素材</NavLink>
             {role === 'owner' && <NavLink to="/sales">売上</NavLink>}
             <NavLink to="/new">新規登録</NavLink>
             {role === 'owner' && <NavLink to="/settings">設定</NavLink>}
