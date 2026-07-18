@@ -227,6 +227,11 @@ export default function Timetable() {
                   const split = lyt.width < 1 // 重なりで横分割中か
                   // デモのみ：現在時刻から済/来店中/予定を動的判定（データは書き換えない）
                   const prog = (IS_DEMO && !r.cancelled) ? resProgress(r, now) : null
+                  // 施術記録の入力状況（実店舗でも表示）：予約時刻が過ぎていて、顧客登録済みのものだけ判定。
+                  // 施術記録とのひも付けはIDではなく日付一致で見る（addTreatmentの「1日1来店」判定と同じ考え方）
+                  const isPastAppt = !r.cancelled && resProgress(r, now) === 'done'
+                  const linkedCustomer = r.customerId ? customers.find((c) => c.id === r.customerId) : null
+                  const isRecorded = linkedCustomer ? (linkedCustomer.history || []).some((h) => h.date === r.date) : null
                   return (
                     <div
                       key={r.id}
@@ -238,7 +243,14 @@ export default function Timetable() {
                       onPointerCancel={onPointerCancel}
                     >
                       <b style={{ color: r.cancelled ? '#aaa' : undefined }}>{minToStr(sMin)}–{minToStr(eMin)}</b>
-                      <div className="nm" style={{ color: r.cancelled ? '#aaa' : undefined, textDecoration: r.cancelled ? 'line-through' : undefined }}>{r.customer || '（名前未入力）'}{prog === 'done' && <span className="tt-prog done">済</span>}{prog === 'now' && <span className="tt-prog now">来店中</span>}</div>
+                      <div className="nm" style={{ color: r.cancelled ? '#aaa' : undefined, textDecoration: r.cancelled ? 'line-through' : undefined }}>
+                        {r.customer || '（名前未入力）'}
+                        {prog === 'done' && <span className="tt-prog done">済</span>}
+                        {prog === 'now' && <span className="tt-prog now">来店中</span>}
+                        {isPastAppt && linkedCustomer && (isRecorded
+                          ? <span className="tt-prog recorded">記録済</span>
+                          : <span className="tt-prog unrecorded">記録未</span>)}
+                      </div>
                       {r.cancelled ? <span style={{ fontSize: 10, color: '#d32f2f' }}>キャンセル</span> : !split && <div className="m">{r.menu}</div>}
                       {!r.cancelled && !split && <span className="tt-src" style={{ color: meta.color }}>{meta.short}</span>}
                     </div>

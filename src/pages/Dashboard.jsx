@@ -80,13 +80,24 @@ export default function Dashboard() {
       .sort((a, b) => a.start.localeCompare(b.start))
     const todayRes = todayResList.length
 
+    // 施術記録が未入力の予約：時刻が過ぎていて（今日なら来店時刻を過ぎている）、
+    // キャンセルではなく、顧客に紐付いていて、その日の施術記録がまだ無いもの。
+    // 施術記録とのひも付けは日付一致で見る（addTreatmentの「1日1来店」判定と同じ考え方）
+    const now = new Date()
+    const unrecorded = reservations
+      .filter((r) => !r.cancelled && r.customerId && r.date <= TODAY_ISO)
+      .filter((r) => r.date < TODAY_ISO || resProgress(r, now) === 'done')
+      .map((r) => ({ r, c: customers.find((x) => x.id === r.customerId) }))
+      .filter(({ r, c }) => c && !(c.history || []).some((h) => h.date === r.date))
+      .sort((a, b) => (a.r.date < b.r.date ? 1 : a.r.date > b.r.date ? -1 : b.r.start.localeCompare(a.r.start)))
+
     // 今月誕生日のお客様
     const thisMonth = String(TODAY.getMonth() + 1).padStart(2, '0')
     const birthdayCustomers = customers
       .filter((c) => c.birthday && c.birthday.slice(5, 7) === thisMonth)
       .sort((a, b) => (a.birthday || '').slice(8).localeCompare((b.birthday || '').slice(8)))
 
-    return { monthSales, monthVisits, todaySales, todayVisits, repeat, followup, statusCounts, srcCounts, resTotal, lineRate, lineTargets, todayRes, todayResList, birthdayCustomers }
+    return { monthSales, monthVisits, todaySales, todayVisits, repeat, followup, statusCounts, srcCounts, resTotal, lineRate, lineTargets, todayRes, todayResList, birthdayCustomers, unrecorded }
   }, [customers, reservations, settings])
 
   const today = new Date(TODAY_ISO + 'T00:00:00')
@@ -128,6 +139,28 @@ export default function Dashboard() {
       <div className="dash-grid">
         {/* LEFT */}
         <div>
+          {/* 施術記録もれアラート */}
+          {m.unrecorded.length > 0 && (
+            <div className="card section" style={{ background: '#fff8f0', border: '1px solid #f0c987' }}>
+              <h3>⚠️ 施術記録の入力もれ（{m.unrecorded.length}件）</h3>
+              <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>来店時刻を過ぎているのに、まだ施術記録が入力されていない予約です。売上台帳にも反映されません。</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {m.unrecorded.slice(0, 8).map(({ r, c }) => (
+                  <div key={r.id} className="target-row" onClick={() => nav(`/record/${c.id}?date=${encodeURIComponent(r.date)}&staff=${encodeURIComponent(r.staff || '')}&menu=${encodeURIComponent(r.menu || '')}`)}>
+                    <div>
+                      <div className="tname">{c.name}</div>
+                      <div className="tsub">{r.date}（{r.start}〜） / {r.menu || 'メニュー未記入'} / 担当 {r.staff || '未定'}</div>
+                    </div>
+                    <span className="tcta">記録する →</span>
+                  </div>
+                ))}
+              </div>
+              {m.unrecorded.length > 8 && (
+                <p style={{ margin: '8px 0 0', fontSize: 12, color: 'var(--muted)' }}>他 {m.unrecorded.length - 8} 件あります。予約タイムテーブルの「記録未」バッジからも確認できます。</p>
+              )}
+            </div>
+          )}
+
           {/* 通知欄（最優先） */}
           <div className="card section">
             <h3>
