@@ -103,8 +103,13 @@ export default function TreatmentRecord() {
               <select
                 value={settings.menus.includes(f.menu) ? f.menu : ''}
                 onChange={(e) => {
-                  if (e.target.value === '__custom__') { setCustomMenu(true); setF((p) => ({ ...p, menu: '' })) }
-                  else setF((p) => ({ ...p, menu: e.target.value }))
+                  const v = e.target.value
+                  if (v === '__custom__') { setCustomMenu(true); setF((p) => ({ ...p, menu: '' })) }
+                  else {
+                    // 設定で金額が登録されているメニューは、金額欄を自動で埋める（記録時に調整可）
+                    const configuredPrice = settings.menuPrices?.[v]
+                    setF((p) => ({ ...p, menu: v, price: configuredPrice != null ? String(configuredPrice) : p.price }))
+                  }
                 }}
                 required
               >
@@ -136,9 +141,10 @@ export default function TreatmentRecord() {
         {/* 施術前後の写真 */}
         <div style={{ marginTop: '1.5rem' }}>
           <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>📷 施術前後の写真（任意）</h3>
+          <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>写真の「📤」ボタンから、スマホの共有機能でInstagramや加工アプリ（Canva等）へそのまま渡せます（お客様の同意を得た写真のみご利用ください）。</p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-            <PhotoZone label="施術前" items={photosBefore} onAdd={(files) => addFiles(files, setPhotosBefore)} onRemove={(i) => removePhoto(i, setPhotosBefore)} inputRef={beforeRef} />
-            <PhotoZone label="施術後" items={photosAfter} onAdd={(files) => addFiles(files, setPhotosAfter)} onRemove={(i) => removePhoto(i, setPhotosAfter)} inputRef={afterRef} />
+            <PhotoZone label="施術前" items={photosBefore} onAdd={(files) => addFiles(files, setPhotosBefore)} onRemove={(i) => removePhoto(i, setPhotosBefore)} inputRef={beforeRef} shareCaption={`施術前・${f.menu || ''}`} />
+            <PhotoZone label="施術後" items={photosAfter} onAdd={(files) => addFiles(files, setPhotosAfter)} onRemove={(i) => removePhoto(i, setPhotosAfter)} inputRef={afterRef} shareCaption={`施術後・${f.menu || ''}`} />
           </div>
         </div>
 
@@ -153,7 +159,28 @@ export default function TreatmentRecord() {
   )
 }
 
-function PhotoZone({ label, items, onAdd, onRemove, inputRef }) {
+function PhotoZone({ label, items, onAdd, onRemove, inputRef, shareCaption }) {
+  // スマホの共有シートを開き、Instagramや加工アプリ（Canva等）へ写真を渡す。
+  // navigator.shareが使えない環境（主にPCブラウザ）では、代わりにダウンロードして
+  // 手動で共有してもらう
+  const shareItem = async (item) => {
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [item.file] })) {
+        await navigator.share({ files: [item.file], title: 'オカエル', text: shareCaption || '' })
+        return
+      }
+    } catch (e) {
+      // ユーザーがキャンセルした場合など。エラー表示はしない
+      if (e?.name === 'AbortError') return
+    }
+    const a = document.createElement('a')
+    a.href = item.preview
+    a.download = `${label}_${Date.now()}.jpg`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  }
+
   return (
     <div>
       <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>{label}</div>
@@ -162,6 +189,12 @@ function PhotoZone({ label, items, onAdd, onRemove, inputRef }) {
           <div key={i} style={{ position: 'relative' }}>
             <img src={item.preview} alt="" style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: '1px solid #ddd' }} />
             <button type="button" onClick={() => onRemove(i)} style={{ position: 'absolute', top: -6, right: -6, width: 20, height: 20, borderRadius: '50%', background: '#d32f2f', color: '#fff', border: 'none', cursor: 'pointer', fontSize: 12, lineHeight: 1, padding: 0 }}>×</button>
+            <button
+              type="button"
+              onClick={() => shareItem(item)}
+              title="Instagramや加工アプリに共有／保存"
+              style={{ position: 'absolute', bottom: -6, right: -6, width: 22, height: 22, borderRadius: '50%', background: 'var(--accent, #2c5e3c)', color: '#fff', border: '2px solid #fff', cursor: 'pointer', fontSize: 11, lineHeight: 1, padding: 0 }}
+            >📤</button>
           </div>
         ))}
         <button

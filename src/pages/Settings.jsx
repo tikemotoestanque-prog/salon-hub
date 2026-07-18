@@ -14,6 +14,7 @@ export default function Settings() {
   const [capacity, setCapacity] = useState(settings.capacity || {})
   const [menus, setMenus] = useState(settings.menus)
   const [menuDurations, setMenuDurations] = useState(settings.menuDurations || {})
+  const [menuPrices, setMenuPrices] = useState(settings.menuPrices || {})
   const [designationFees, setDesignationFees] = useState(settings.designationFees || {})
   const [openTime, setOpenTime] = useState(settings.openTime || '10:00')
   const [closeTime, setCloseTime] = useState(settings.closeTime || '19:00')
@@ -42,6 +43,7 @@ export default function Settings() {
   const addMenu = () => setMenus([...menus, ''])
   const delMenu = (i) => setMenus(menus.filter((_, idx) => idx !== i))
   const setMenuDur = (m, v) => setMenuDurations({ ...menuDurations, [m]: Number(v) || 60 })
+  const setMenuPriceAt = (m, v) => setMenuPrices({ ...menuPrices, [m]: v === '' ? undefined : Number(v) || 0 })
 
   // --- holidays ---
   const WD = ['日', '月', '火', '水', '木', '金', '土']
@@ -82,6 +84,7 @@ export default function Settings() {
       capacity: cap,
       menus: menus.map((s) => s.trim()).filter(Boolean),
       menuDurations,
+      menuPrices,
       designationFees,
       openTime,
       closeTime,
@@ -245,7 +248,7 @@ export default function Settings() {
       {/* メニュー */}
       <div className="card section">
         <h3>🧾 メニュー候補</h3>
-        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>施術記録・予約入力のメニュー欄で候補として出ます。所要時間は予約の空き枠計算に使います。</p>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>施術記録・予約入力のメニュー欄で候補として出ます。所要時間は予約の空き枠計算に、金額は施術記録でメニューを選んだときの金額欄の自動入力に使います（未入力なら概算のまま・記録時に自由に調整できます）。</p>
         <div className="menu-grid">
           {menus.map((s, i) => (
             <div className="row-edit" key={i} style={{ gap: 6 }}>
@@ -258,6 +261,15 @@ export default function Settings() {
                 title="所要時間（分）"
               />
               <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>分</span>
+              <input
+                type="number" min="0" step="100"
+                value={menuPrices[s] ?? ''}
+                onChange={(e) => setMenuPriceAt(s, e.target.value)}
+                placeholder="金額"
+                style={{ width: 84, textAlign: 'center' }}
+                title="金額（円・未入力なら概算を使用）"
+              />
+              <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>円</span>
               <button className="btn ghost danger sm" onClick={() => delMenu(i)}>×</button>
             </div>
           ))}
