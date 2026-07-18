@@ -1,10 +1,17 @@
 import { useState, useEffect } from 'react'
 import { useStore } from '../store.jsx'
 import { useAuth } from '../AuthContext.jsx'
+import { uploadRichMenuImage } from '../supabaseClient.js'
 import { DEFAULT_SALON_NAME, DEFAULT_INDUSTRY, DEFAULT_ICON_EMOJI, DEFAULT_ADDRESS, DEFAULT_PHONE, DEFAULT_LINE_TEMPLATES } from '../config/defaults.js'
+
+// リッチメニュー自動切替の対象ステータス（自動判定で使う5種固定。Settings.jsx内の
+// 「ステータスの種類」カードの説明と同じ区分）
+const RICHMENU_KEYS = ['new', 'regular', 'vip', 'followup', 'dormant']
+const blankRichMenuStatus = () => ({ imageUrl: '', lineRichMenuId: '', areas: [{ label: '', url: '' }, { label: '', url: '' }] })
 
 export default function Settings() {
   const { settings, updateSettings, recomputeAll } = useStore()
+  const { session } = useAuth()
 
   const [salonName, setSalonName] = useState(settings.salonName || DEFAULT_SALON_NAME)
   const [industry, setIndustry] = useState(settings.industry || DEFAULT_INDUSTRY)
@@ -32,6 +39,23 @@ export default function Settings() {
   const [keywordReplies, setKeywordReplies] = useState(settings.keywordReplies || [])
   const [tagList, setTagList] = useState(settings.tags || [])
   const [salesSheetUrl, setSalesSheetUrl] = useState(settings.salesSheetUrl || '')
+  const [dateReminders, setDateReminders] = useState(settings.dateReminders || [])
+  const [richMenuEnabled, setRichMenuEnabled] = useState(!!(settings.richMenu && settings.richMenu.enabled))
+  const [richMenuStatuses, setRichMenuStatuses] = useState(() => {
+    const src = (settings.richMenu && settings.richMenu.statuses) || {}
+    const out = {}
+    RICHMENU_KEYS.forEach((k) => {
+      const s = src[k] || {}
+      out[k] = {
+        imageUrl: s.imageUrl || '',
+        lineRichMenuId: s.lineRichMenuId || '',
+        areas: [0, 1].map((i) => ({ label: s.areas?.[i]?.label || '', url: s.areas?.[i]?.url || '' })),
+      }
+    })
+    return out
+  })
+  const [richMenuBusy, setRichMenuBusy] = useState(false)
+  const [richMenuResult, setRichMenuResult] = useState(null)
   const [saved, setSaved] = useState('')
 
   const flash = (msg) => { setSaved(msg); setTimeout(() => setSaved(''), 2500) }
@@ -72,6 +96,91 @@ export default function Settings() {
   const setKeywordReplyAt = (i, k, v) => setKeywordReplies(keywordReplies.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)))
   const addKeywordReply = () => setKeywordReplies([...keywordReplies, { keyword: '', reply: '' }])
   const delKeywordReply = (i) => setKeywordReplies(keywordReplies.filter((_, idx) => idx !== i))
+
+  // --- 日付起点リマインダー ---
+  const setDateReminderAt = (i, k, v) => setDateReminders(dateReminders.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)))
+  const addDateReminder = () => setDateReminders([...dateReminders, { id: 'dr' + Date.now().toString().slice(-6), origin: 'firstVisit', days: 30, message: '' }])
+  const delDateReminder = (i) => setDateReminders(dateReminders.filter((_, idx) => idx !== i))
+
+  // --- リッチメニュー自動切替 ---
+  const setRMField = (key, field, v) => setRichMenuStatuses((s) => ({ ...s, [key]: { ...s[key], [field]: v } }))
+  const setRMArea = (key, idx, field, v) => setRichMenuStatuses((s) => ({
+    ...s,
+    [key]: { ...s[key], areas: s[key].areas.map((a, i) => (i === idx ? { ...a, [field]: v } : a)) },
+  }))
+  const handleRMFileChange = async (key, file) => {
+    if (!file) return
+    setRichMenuBusy(true)
+    const url = await uploadRichMenuImage(file, key)
+    setRichMenuBusy(false)
+    if (url) setRMField(key, 'imageUrl', url)
+    else flash('画像のアップロードに失敗しました')
+  }
+  const generateRMImage = async (key) => {
+    const meta = statusList.find((s) => s.key === key) || { label: key, icon: '🏷', color: '#39735d', bg: '#f4f1ec' }
+    const area1 = richMenuStatuses[key].areas[0].label || 'ご予約はこちら'
+    const area2 = richMenuStatuses[key].areas[1].label || 'マイページ'
+    const canvas = document.createElement('canvas')
+    canvas.width = 2500
+    canvas.height = 843
+    const ctx = canvas.getContext('2d')
+    ctx.fillStyle = meta.bg || '#f4f1ec'
+    ctx.fillRect(0, 0, 2500, 843)
+    ctx.fillStyle = meta.color || '#39735d'
+    ctx.fillRect(1247, 0, 6, 843)
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+    ctx.fillStyle = meta.color || '#39735d'
+    ctx.font = 'bold 60px sans-serif'
+    ctx.fillText(`${meta.icon || ''} ${meta.label || key} 向けメニュー`, 1250, 130)
+    ctx.font = 'bold 100px sans-serif'
+    ctx.fillText(area1, 625, 480)
+    ctx.fillText(area2, 1875, 480)
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
+    if (!blob) { flash('画像の生成に失敗しました'); return }
+    const file = new File([blob], `richmenu-${key}.png`, { type: 'image/png' })
+    setRichMenuBusy(true)
+    const url = await uploadRichMenuImage(file, key)
+    setRichMenuBusy(false)
+    if (url) setRMField(key, 'imageUrl', url)
+    else flash('画像の生成・アップロードに失敗しました')
+  }
+  const syncRichMenus = async () => {
+    setRichMenuBusy(true)
+    setRichMenuResult(null)
+    const richMenuPayload = {
+      enabled: richMenuEnabled,
+      statuses: Object.fromEntries(RICHMENU_KEYS.map((k) => [k, {
+        imageUrl: richMenuStatuses[k].imageUrl,
+        lineRichMenuId: richMenuStatuses[k].lineRichMenuId,
+        areas: richMenuStatuses[k].areas.map((a) => ({ label: (a.label || '').trim(), url: (a.url || '').trim() })),
+      }])),
+    }
+    try {
+      const res = await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        body: JSON.stringify({ action: 'syncRichMenus', richMenu: richMenuPayload }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || '反映に失敗しました')
+      setRichMenuResult(data.results || {})
+      if (data.richMenu?.statuses) {
+        setRichMenuStatuses((s) => {
+          const out = { ...s }
+          RICHMENU_KEYS.forEach((k) => {
+            if (data.richMenu.statuses[k]) out[k] = { ...s[k], lineRichMenuId: data.richMenu.statuses[k].lineRichMenuId || '' }
+          })
+          return out
+        })
+        updateSettings({ richMenu: data.richMenu })
+      }
+      flash('LINEへの反映が完了しました（結果は下でご確認ください）')
+    } catch (e) {
+      flash('反映に失敗しました: ' + e.message)
+    }
+    setRichMenuBusy(false)
+  }
 
   // --- statuses ---
   const setStatusAt = (i, k, v) => setStatusList(statusList.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)))
@@ -115,6 +224,22 @@ export default function Settings() {
         .filter((r) => r.keyword && r.reply),
       tags: [...new Set(tagList.map((t) => t.trim()).filter(Boolean))],
       salesSheetUrl: salesSheetUrl.trim(),
+      dateReminders: dateReminders
+        .map((r) => ({
+          id: r.id,
+          origin: r.origin === 'lastVisit' ? 'lastVisit' : 'firstVisit',
+          days: Math.max(0, Number(r.days) || 0),
+          message: (r.message || '').trim(),
+        }))
+        .filter((r) => r.id && r.message),
+      richMenu: {
+        enabled: richMenuEnabled,
+        statuses: Object.fromEntries(RICHMENU_KEYS.map((k) => [k, {
+          imageUrl: richMenuStatuses[k].imageUrl,
+          lineRichMenuId: richMenuStatuses[k].lineRichMenuId,
+          areas: richMenuStatuses[k].areas.map((a) => ({ label: (a.label || '').trim(), url: (a.url || '').trim() })),
+        }])),
+      },
     })
     return statuses
   }
@@ -403,6 +528,90 @@ export default function Settings() {
           </div>
         ))}
         <button className="btn ghost sm" onClick={addKeywordReply}>＋ キーワードを追加</button>
+      </div>
+
+      {/* 日付起点リマインダー */}
+      <div className="card section">
+        <h3>📅 日付起点リマインダー</h3>
+        <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--muted)' }}>
+          誕生日・来店周期の自動リマインドとは別に、「初回来店から◯日後」「前回来店から一律◯日後」のように起点日を選んで自由にLINEを自動送信できます。何本でも登録可能です（毎日朝の自動配信バッチで判定・送信）。
+        </p>
+        <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--muted)' }}>
+          「前回来店から一律◯日後」は、上の「来店タイミングのご案内」（平均来店周期の自動リマインド）と重複しやすいため、併用する場合はメッセージ内容を変えるなど工夫してください。
+          使えるプレースホルダ：<code>{'{salonName}'}</code>（店名） <code>{'{customerName}'}</code>（お客様名） <code>{'{menu}'}</code>（直近のメニュー）
+        </p>
+        {dateReminders.map((r, i) => (
+          <div className="row-edit" key={r.id || i} style={{ gap: 6, alignItems: 'flex-start' }}>
+            <select value={r.origin} onChange={(e) => setDateReminderAt(i, 'origin', e.target.value)} style={{ width: 150 }}>
+              <option value="firstVisit">初回来店日から</option>
+              <option value="lastVisit">前回来店日から</option>
+            </select>
+            <input type="number" min="0" value={r.days} onChange={(e) => setDateReminderAt(i, 'days', e.target.value)} style={{ width: 70, textAlign: 'center' }} />
+            <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>日後に送信</span>
+            <textarea rows={2} value={r.message} onChange={(e) => setDateReminderAt(i, 'message', e.target.value)} placeholder="送信する文面" style={{ flex: 2 }} />
+            <button className="btn ghost danger sm" onClick={() => delDateReminder(i)}>削除</button>
+          </div>
+        ))}
+        <button className="btn ghost sm" onClick={addDateReminder}>＋ リマインダーを追加</button>
+      </div>
+
+      {/* リッチメニュー自動切替 */}
+      <div className="card section">
+        <h3>🖼 リッチメニュー自動切替（LINE）</h3>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>
+          お客様のステータス（新規/常連/VIP/要フォロー/休眠）に応じて、LINEトーク画面下部のリッチメニューを自動で出し分けます。
+          画像は「🎨 かんたん自動生成」でとりあえず作成できます（本番はCanva等でデザインしたものに差し替えるのがおすすめです）。
+          有効にした後、既存のお客様は次回の来店記録・チェックイン時に自動で切り替わります。設定を変えたら「LINEに反映する」を押してください。
+        </p>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, fontSize: 14 }}>
+          <input type="checkbox" checked={richMenuEnabled} onChange={(e) => setRichMenuEnabled(e.target.checked)} />
+          リッチメニューの自動切替を有効にする
+        </label>
+        {RICHMENU_KEYS.map((key) => {
+          const meta = statusList.find((s) => s.key === key) || { label: key, icon: '🏷', color: '#555', bg: '#eee' }
+          const rm = richMenuStatuses[key] || blankRichMenuStatus()
+          const result = richMenuResult && richMenuResult[key]
+          return (
+            <div key={key} style={{ border: '1px solid var(--line)', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                <span className="badge" style={{ background: meta.bg, color: meta.color }}><span>{meta.icon}</span>{meta.label}</span>
+                {rm.lineRichMenuId && <span style={{ fontSize: 11, color: 'var(--muted)' }}>LINE反映済み</span>}
+              </div>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                <div style={{ width: 160 }}>
+                  {rm.imageUrl ? (
+                    <img src={rm.imageUrl} alt={meta.label} style={{ width: '100%', borderRadius: 6, border: '1px solid var(--line)' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: 54, background: '#f3f3f3', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--muted)' }}>未設定</div>
+                  )}
+                  <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+                    <button type="button" className="btn ghost sm" disabled={richMenuBusy} onClick={() => generateRMImage(key)}>🎨 自動生成</button>
+                    <label className="btn ghost sm" style={{ cursor: 'pointer', margin: 0 }}>
+                      画像を選ぶ
+                      <input type="file" accept="image/png,image/jpeg" style={{ display: 'none' }} onChange={(e) => handleRMFileChange(key, e.target.files?.[0])} />
+                    </label>
+                  </div>
+                </div>
+                <div style={{ flex: 1, minWidth: 240, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {[0, 1].map((idx) => (
+                    <div key={idx} style={{ display: 'flex', gap: 6 }}>
+                      <input value={rm.areas[idx].label} onChange={(e) => setRMArea(key, idx, 'label', e.target.value)} placeholder={idx === 0 ? '左側の文言（例：ご予約）' : '右側の文言（例：マイページ）'} style={{ flex: 1 }} />
+                      <input value={rm.areas[idx].url} onChange={(e) => setRMArea(key, idx, 'url', e.target.value)} placeholder="https://…（リンク先URL）" style={{ flex: 2 }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {result && (
+                <p style={{ margin: '6px 0 0', fontSize: 12, color: result.ok ? '#2e7d32' : '#d32f2f' }}>
+                  {result.ok ? '✓ ' : '✗ '}{result.message}
+                </p>
+              )}
+            </div>
+          )
+        })}
+        <button type="button" className="btn ghost sm" disabled={richMenuBusy} onClick={syncRichMenus}>
+          {richMenuBusy ? '反映中…' : 'LINEに反映する'}
+        </button>
       </div>
 
       {/* 売上シート連携 */}

@@ -21,3 +21,15 @@ export async function uploadPhoto(file, customerId) {
   const { data } = supabase.storage.from('treatment-photos').getPublicUrl(path)
   return data.publicUrl
 }
+
+// リッチメニュー画像をSupabase Storageにアップロードして公開URLを返す
+// 新規バケットは作らず、既存の treatment-photos バケットに richmenu/ プレフィックスで保存する
+export async function uploadRichMenuImage(file, statusKey) {
+  if (!supabase) return null
+  const ext = (file.name && file.name.split('.').pop()) || 'png'
+  const path = `richmenu/${statusKey}/${Date.now()}.${ext}`
+  const { error } = await supabase.storage.from('treatment-photos').upload(path, file, { upsert: false })
+  if (error) { console.error('richmenu image upload error', error); return null }
+  const { data } = supabase.storage.from('treatment-photos').getPublicUrl(path)
+  return data.publicUrl
+}

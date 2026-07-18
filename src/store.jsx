@@ -176,6 +176,22 @@ export function StoreProvider({ children }) {
   const dbRedeem = (x) => { if (hasSupabase) supabase.from('coupon_redemptions').upsert(toRedemptionRow(x), { onConflict: 'customer_id,coupon_tag' }).then(({ error }) => { if (error) { console.error('redeem upsert', error); toast('クーポンの処理に失敗しました', 'error') } }) }
   const dbUnredeem = (customerId, tag) => { if (hasSupabase) supabase.from('coupon_redemptions').delete().eq('customer_id', customerId).eq('coupon_tag', tag).then(({ error }) => { if (error) { console.error('redeem delete', error); toast('クーポンの処理に失敗しました', 'error') } }) }
 
+  // ステータスが変わったら、そのお客様のLINEリッチメニューを新ステータス用に切り替える。
+  // リッチメニュー機能が未設定・LINE未連携の場合はAPI側が何もせず成功を返すので、ここでは
+  // 気にせず呼ぶだけでよい。失敗しても業務（施術記録・チェックイン）自体は止めない
+  // （fire-and-forget）が、握りつぶさずconsole.errorには残す
+  // （キーワード自動返信の記録もれ不具合と同じ轍を踏まないため）。
+  const syncRichMenu = (customer, prevStatus) => {
+    if (!hasSupabase || !session?.access_token) return
+    if (!customer?.integrations?.lineUserId) return
+    if (customer.status === prevStatus) return
+    fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'linkRichMenu', customerId: customer.id }),
+    }).catch((e) => console.error('richmenu link failed', e))
+  }
+
   // ----- ミューテーション（state更新＋DB書き込み） -----
   const addCustomer = (c) => {
     const id = 'c' + String(Date.now()).slice(-6)
@@ -236,6 +252,7 @@ export function StoreProvider({ children }) {
     updated.reservationPattern = computePattern(history)
     setState((s) => ({ ...s, customers: s.customers.map((x) => (x.id === customerId ? updated : x)) }))
     dbCustomer(updated)
+    syncRichMenu(updated, c.status)
     toast('施術記録を保存しました')
 
     // 売上シート連携（設定されている場合のみ・ベストエフォート）
@@ -270,6 +287,7 @@ export function StoreProvider({ children }) {
     updated.status = computeStatus(updated, stateRef.current.settings.thresholds)
     setState((s) => ({ ...s, customers: s.customers.map((x) => (x.id === customerId ? updated : x)) }))
     dbCustomer(updated)
+    syncRichMenu(updated, c.status)
     // 来店をダッシュボードに通知
     if (hasSupabase) {
       supabase.from('notifications').insert({
