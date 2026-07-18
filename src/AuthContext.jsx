@@ -19,8 +19,12 @@ export function AuthProvider({ children }) {
   const signIn = (email, password) => supabase.auth.signInWithPassword({ email, password })
   const signOut = () => supabase.auth.signOut()
 
+  // アカウントの権限（user_metadata.role）。未設定の場合は従来通り「オーナー」扱い
+  // （既にSupabase管理画面で作成済みのアカウントを締め出さないための後方互換）。
+  const role = session?.user?.user_metadata?.role === 'staff' ? 'staff' : 'owner'
+
   return (
-    <AuthContext.Provider value={{ session, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, role, signIn, signOut }}>
       {children}
     </AuthContext.Provider>
   )

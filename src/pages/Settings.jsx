@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useStore } from '../store.jsx'
+import { useAuth } from '../AuthContext.jsx'
 import { DEFAULT_SALON_NAME, DEFAULT_INDUSTRY, DEFAULT_ICON_EMOJI, DEFAULT_ADDRESS, DEFAULT_PHONE, DEFAULT_LINE_TEMPLATES } from '../config/defaults.js'
 
 export default function Settings() {
@@ -179,6 +180,8 @@ export default function Settings() {
         ))}
         <button className="btn ghost sm" onClick={addStaff}>＋ スタッフを追加</button>
       </div>
+
+      <StaffAccountsCard />
 
       {/* 営業時間 */}
       <div className="card section">
@@ -367,6 +370,88 @@ export default function Settings() {
           {saved && <span className="save-flash">{saved}</span>}
         </div>
       </div>
+    </div>
+  )
+}
+
+// スタッフのログインアカウントを、池本さんに頼まずオーナー自身が作成・削除できるようにする画面。
+// 「オーナー」＝全ページ閲覧可、「スタッフ」＝売上・設定を除く画面のみ（App.jsxでルート制限）。
+function StaffAccountsCard() {
+  const { session } = useAuth()
+  const [list, setList] = useState(null) // null = 読込中
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [role, setRole] = useState('staff')
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState('')
+
+  const call = async (action, extra = {}) => {
+    const res = await fetch('/api/notifications', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+      body: JSON.stringify({ action, ...extra }),
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) throw new Error(data.error || '通信エラーが発生しました')
+    return data
+  }
+
+  const load = () => {
+    setErr('')
+    call('listStaff').then((d) => setList(d.staff || [])).catch((e) => setErr(e.message))
+  }
+  useEffect(() => { load() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addAccount = async (e) => {
+    e.preventDefault()
+    if (!email.trim() || password.length < 6) { setErr('メールアドレスと6文字以上のパスワードを入力してください'); return }
+    setBusy(true); setErr('')
+    try {
+      await call('createStaff', { email: email.trim(), password, role })
+      setEmail(''); setPassword(''); setRole('staff')
+      load()
+    } catch (e) { setErr(e.message) }
+    setBusy(false)
+  }
+
+  const removeAccount = async (id) => {
+    if (!confirm('このアカウントを削除しますか？ ログインできなくなります。')) return
+    setBusy(true); setErr('')
+    try { await call('deleteStaff', { id }); load() } catch (e) { setErr(e.message) }
+    setBusy(false)
+  }
+
+  return (
+    <div className="card section">
+      <h3>🔑 スタッフのログインアカウント</h3>
+      <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>
+        管理画面へのログインアカウントを、ここから作成・削除できます（これまで池本さんが代行していた作業です）。
+        「オーナー」は全ページ、「スタッフ」は売上・設定を除く画面だけ見られます。
+      </p>
+      {err && <p style={{ color: '#d32f2f', fontSize: 12, marginBottom: 8 }}>{err}</p>}
+      {list === null ? (
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>読み込み中…</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 14 }}>
+          {list.length === 0 && <div style={{ fontSize: 13, color: 'var(--muted)' }}>アカウントがありません</div>}
+          {list.map((u) => (
+            <div className="row-edit" key={u.id} style={{ gap: 6 }}>
+              <span style={{ flex: 2, fontSize: 13 }}>{u.email}</span>
+              <span className="pill">{u.role === 'owner' ? 'オーナー' : 'スタッフ'}</span>
+              <button className="btn ghost danger sm" onClick={() => removeAccount(u.id)} disabled={busy}>削除</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <form onSubmit={addAccount} style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="staff@example.com" style={{ flex: 2, minWidth: 180 }} />
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="初期パスワード（6文字以上）" style={{ flex: 1, minWidth: 160 }} />
+        <select value={role} onChange={(e) => setRole(e.target.value)} style={{ width: 110 }}>
+          <option value="staff">スタッフ</option>
+          <option value="owner">オーナー</option>
+        </select>
+        <button type="submit" className="btn ghost sm" disabled={busy}>＋ アカウントを追加</button>
+      </form>
     </div>
   )
 }

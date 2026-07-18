@@ -27,9 +27,12 @@ import okaeruCharacter from './assets/okaeru-character.png'
 // お客様向け（管理画面のヘッダーを出さない独立ページ）
 const CUSTOMER_PREFIXES = ['/lp', '/u/', '/book', '/access', '/menu', '/liff', '/privacy']
 
+// スタッフ権限（role: 'staff'）では見せない管理画面のパス（売上・設定はオーナーのみ）
+const OWNER_ONLY_PATHS = ['/sales', '/settings']
+
 export default function App() {
   const { resetData } = useStore()
-  const { session, signOut } = useAuth()
+  const { session, role, signOut } = useAuth()
   const { pathname } = useLocation()
   const isCustomer = CUSTOMER_PREFIXES.some((p) => pathname === p || pathname.startsWith(p))
 
@@ -42,6 +45,11 @@ export default function App() {
   // 管理画面はログイン必須（Supabase未設定時はスルー）
   if (!isCustomer && session === null) {
     return <Login />
+  }
+
+  // スタッフ権限では売上・設定に直接URLを打っても入れないようにする
+  if (!isCustomer && role === 'staff' && OWNER_ONLY_PATHS.some((p) => pathname.startsWith(p))) {
+    return <Navigate to="/" replace />
   }
 
   const routes = (
@@ -94,9 +102,9 @@ export default function App() {
             <NavLink to="/checkin">チェックイン</NavLink>
             <NavLink to="/customers">顧客一覧</NavLink>
             <NavLink to="/alerts">フォロー漏れ</NavLink>
-            <NavLink to="/sales">売上</NavLink>
+            {role === 'owner' && <NavLink to="/sales">売上</NavLink>}
             <NavLink to="/new">新規登録</NavLink>
-            <NavLink to="/settings">設定</NavLink>
+            {role === 'owner' && <NavLink to="/settings">設定</NavLink>}
           </nav>
           {session && (
             <button className="reset-btn" onClick={() => { if (confirm('ログアウトしますか？')) signOut() }}>
