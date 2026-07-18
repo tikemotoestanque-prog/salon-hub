@@ -12,13 +12,19 @@ export default function FollowUpAlerts() {
   const [selected, setSelected] = useState(() => new Set())
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState('')
-  const [tagFilter, setTagFilter] = useState('all')
+  // ステータス（自動）とタグ（手動）を1つの絞り込みプルダウンにまとめる。
+  // 値は 'all' | 'status:<key>' | 'tag:<name>'
+  const [filter, setFilter] = useState('all')
 
   const allAlerts = customers
     .map((c) => ({ c, days: daysSince(c.lastVisit) }))
     .filter((x) => x.days != null && x.days >= THRESHOLD)
     .sort((a, b) => b.days - a.days)
-  const alerts = tagFilter === 'all' ? allAlerts : allAlerts.filter(({ c }) => (c.tags || []).includes(tagFilter))
+  const alerts = allAlerts.filter(({ c }) => {
+    if (filter.startsWith('status:')) return c.status === filter.slice(7)
+    if (filter.startsWith('tag:')) return (c.tags || []).includes(filter.slice(4))
+    return true
+  })
 
   const toggle = (id) => {
     setSelected((prev) => {
@@ -67,16 +73,23 @@ export default function FollowUpAlerts() {
           <h1>フォロー漏れアラート</h1>
           <p>
             最終来店から {THRESHOLD} 日以上経過した顧客：{allAlerts.length} 名
-            {tagFilter !== 'all' && <>（「{tagFilter}」タグで絞り込み中：{alerts.length} 名）</>}
+            {filter !== 'all' && <>（絞り込み中：{alerts.length} 名）</>}
             （設定の「要フォローにする未来店日数」で変更できます）
           </p>
         </div>
-        {settings.tags && settings.tags.length > 0 && (
-          <select value={tagFilter} onChange={(e) => { setTagFilter(e.target.value); setSelected(new Set()) }}>
-            <option value="all">すべてのタグ</option>
-            {settings.tags.map((t) => <option key={t} value={t}>🏷 {t}</option>)}
-          </select>
-        )}
+        <select value={filter} onChange={(e) => { setFilter(e.target.value); setSelected(new Set()) }}>
+          <option value="all">すべて（ステータス・タグ）</option>
+          <optgroup label="🔒 ステータス（自動）">
+            {Object.entries(settings.statuses).map(([k, m]) => (
+              <option key={'status:' + k} value={'status:' + k}>{m.icon} {m.label}</option>
+            ))}
+          </optgroup>
+          {settings.tags && settings.tags.length > 0 && (
+            <optgroup label="🏷 タグ（手動）">
+              {settings.tags.map((t) => <option key={'tag:' + t} value={'tag:' + t}>🏷 {t}</option>)}
+            </optgroup>
+          )}
+        </select>
       </div>
 
       {alerts.length > 0 && (

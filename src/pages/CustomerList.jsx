@@ -8,17 +8,19 @@ export default function CustomerList() {
   const { customers, settings } = useStore()
   const nav = useNavigate()
   const [q, setQ] = useState('')
-  const [status, setStatus] = useState('all')
-  const [tag, setTag] = useState('all')
+  // ステータス（自動）とタグ（手動）を1つの絞り込みプルダウンにまとめる。
+  // 値は 'all' | 'status:<key>' | 'tag:<name>'
+  const [filter, setFilter] = useState('all')
 
   const list = useMemo(() => {
     return customers.filter((c) => {
-      const okStatus = status === 'all' || c.status === status
-      const okTag = tag === 'all' || (c.tags || []).includes(tag)
+      let okFilter = true
+      if (filter.startsWith('status:')) okFilter = c.status === filter.slice(7)
+      else if (filter.startsWith('tag:')) okFilter = (c.tags || []).includes(filter.slice(4))
       const okQ = !q || (c.name + c.kana + c.lastMenu).toLowerCase().includes(q.toLowerCase())
-      return okStatus && okTag && okQ
+      return okFilter && okQ
     })
-  }, [customers, q, status, tag])
+  }, [customers, q, filter])
 
   return (
     <div>
@@ -32,18 +34,19 @@ export default function CustomerList() {
 
       <div className="toolbar">
         <input placeholder="名前・カナ・メニューで検索" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="all">すべてのステータス</option>
-          {Object.entries(settings.statuses).map(([k, m]) => (
-            <option key={k} value={k}>{m.icon} {m.label}</option>
-          ))}
+        <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+          <option value="all">すべて（ステータス・タグ）</option>
+          <optgroup label="🔒 ステータス（自動）">
+            {Object.entries(settings.statuses).map(([k, m]) => (
+              <option key={'status:' + k} value={'status:' + k}>{m.icon} {m.label}</option>
+            ))}
+          </optgroup>
+          {settings.tags && settings.tags.length > 0 && (
+            <optgroup label="🏷 タグ（手動）">
+              {settings.tags.map((t) => <option key={'tag:' + t} value={'tag:' + t}>🏷 {t}</option>)}
+            </optgroup>
+          )}
         </select>
-        {settings.tags && settings.tags.length > 0 && (
-          <select value={tag} onChange={(e) => setTag(e.target.value)}>
-            <option value="all">すべてのタグ</option>
-            {settings.tags.map((t) => <option key={t} value={t}>🏷 {t}</option>)}
-          </select>
-        )}
       </div>
 
       {list.length === 0 ? (

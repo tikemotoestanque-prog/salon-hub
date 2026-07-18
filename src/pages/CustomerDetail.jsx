@@ -113,14 +113,19 @@ export default function CustomerDetail() {
           </div>
 
           <div className="card section">
-            <h3>🏷 タグ</h3>
-            {c.tags && c.tags.length > 0 ? (
-              <div className="chip-row" style={{ marginBottom: 10 }}>
-                {c.tags.map((t) => (
-                  <span className="tag-chip" key={t}>{t}<button onClick={() => removeTag(t)}>×</button></span>
-                ))}
-              </div>
-            ) : <div style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 10 }}>タグなし</div>}
+            <h3>🏷 ステータス・タグ</h3>
+            <p style={{ margin: '0 0 10px', fontSize: 11.5, color: 'var(--muted)' }}>
+              ステータス（🔒）は来店状況から自動で決まり、手動では変更できません。タグは自由に追加・削除できます。
+            </p>
+            <div className="chip-row" style={{ marginBottom: 10 }}>
+              <span className="tag-chip" style={{ background: 'var(--accent-soft)', color: 'var(--accent-strong)' }} title="自動判定・変更不可">
+                🔒 <StatusBadge status={c.status} />
+              </span>
+              {(c.tags || []).map((t) => (
+                <span className="tag-chip" key={t}>{t}<button onClick={() => removeTag(t)}>×</button></span>
+              ))}
+              {(!c.tags || c.tags.length === 0) && <span style={{ color: 'var(--muted)', fontSize: 13 }}>タグなし</span>}
+            </div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {tagCandidates.length > 0 && (
                 <select value="" onChange={(e) => { if (e.target.value) addTag(e.target.value) }} style={{ maxWidth: 160 }}>
