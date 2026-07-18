@@ -121,6 +121,33 @@ export default async function handler(req, res) {
       read: false,
       created_at: timestamp,
     }).then(({ error }) => error && console.error('message insert', error))
+
+    // キーワード自動返信：設定済みのキーワードを含んでいたら即返信（設定 > キーワード自動返信）
+    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN
+    if (token && event.replyToken) {
+      const { data: setRow } = await supabase.from('settings').select('data').eq('id', 1).maybeSingle()
+      const settings = (setRow && setRow.data) || {}
+      const rules = Array.isArray(settings.keywordReplies) ? settings.keywordReplies : []
+      const matched = rules.find((r) => r.keyword && text.includes(r.keyword))
+      if (matched && matched.reply) {
+        await fetch('https://api.line.me/v2/bot/message/reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ replyToken: event.replyToken, messages: [{ type: 'text', text: matched.reply }] }),
+        }).catch(() => {})
+
+        // 自動返信した内容もトークの会話履歴に残す（顧客が見ても不自然にならないように）
+        await supabase.from('messages').insert({
+          customer_id: customerId,
+          line_user_id: lineUserId,
+          direction: 'out',
+          text: matched.reply,
+          sender: '自動返信',
+          read: true,
+          created_at: new Date().toISOString(),
+        }).catch(() => {})
+      }
+    }
   }
 
   res.status(200).json({ ok: true })

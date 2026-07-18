@@ -29,6 +29,7 @@ export default function Settings() {
     Object.entries(settings.statuses).map(([key, m]) => ({ key, ...m }))
   )
   const [lineTemplates, setLineTemplates] = useState({ ...DEFAULT_LINE_TEMPLATES, ...(settings.lineTemplates || {}) })
+  const [keywordReplies, setKeywordReplies] = useState(settings.keywordReplies || [])
   const [salesSheetUrl, setSalesSheetUrl] = useState(settings.salesSheetUrl || '')
   const [saved, setSaved] = useState('')
 
@@ -60,6 +61,11 @@ export default function Settings() {
   }
   const delStaffOff = (s, d) => setStaffOff({ ...staffOff, [s]: (staffOff[s] || []).filter((x) => x !== d) })
   const fmtMD = (iso) => { const dt = new Date(iso + 'T00:00:00'); return `${dt.getMonth() + 1}/${dt.getDate()}（${WD[dt.getDay()]}）` }
+
+  // --- keyword replies ---
+  const setKeywordReplyAt = (i, k, v) => setKeywordReplies(keywordReplies.map((r, idx) => (idx === i ? { ...r, [k]: v } : r)))
+  const addKeywordReply = () => setKeywordReplies([...keywordReplies, { keyword: '', reply: '' }])
+  const delKeywordReply = (i) => setKeywordReplies(keywordReplies.filter((_, idx) => idx !== i))
 
   // --- statuses ---
   const setStatusAt = (i, k, v) => setStatusList(statusList.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)))
@@ -98,6 +104,9 @@ export default function Settings() {
       closedDates,
       staffOff: cleanOff,
       lineTemplates,
+      keywordReplies: keywordReplies
+        .map((r) => ({ keyword: (r.keyword || '').trim(), reply: (r.reply || '').trim() }))
+        .filter((r) => r.keyword && r.reply),
       salesSheetUrl: salesSheetUrl.trim(),
     })
     return statuses
@@ -343,6 +352,34 @@ export default function Settings() {
             onChange={(e) => setLineTemplates({ ...lineTemplates, revisitNudge: e.target.value })}
             placeholder={DEFAULT_LINE_TEMPLATES.revisitNudge} />
         </div>
+      </div>
+
+      {/* キーワード自動返信 */}
+      <div className="card section">
+        <h3>🤖 キーワード自動返信</h3>
+        <p style={{ margin: '0 0 10px', fontSize: 12, color: 'var(--muted)' }}>
+          お客様からのLINEメッセージに指定したキーワードが含まれていたら、自動で即返信します（例：「営業時間」→営業時間の案内、「予約」→予約リンクの案内）。
+          上から順にチェックし、最初に一致したキーワードの返信が使われます。
+        </p>
+        {keywordReplies.map((r, i) => (
+          <div className="row-edit" key={i} style={{ gap: 6, alignItems: 'flex-start' }}>
+            <input
+              value={r.keyword}
+              onChange={(e) => setKeywordReplyAt(i, 'keyword', e.target.value)}
+              placeholder="キーワード（例：営業時間）"
+              style={{ flex: 1 }}
+            />
+            <textarea
+              rows={2}
+              value={r.reply}
+              onChange={(e) => setKeywordReplyAt(i, 'reply', e.target.value)}
+              placeholder="自動返信する文面"
+              style={{ flex: 2 }}
+            />
+            <button className="btn ghost danger sm" onClick={() => delKeywordReply(i)}>削除</button>
+          </div>
+        ))}
+        <button className="btn ghost sm" onClick={addKeywordReply}>＋ キーワードを追加</button>
       </div>
 
       {/* 売上シート連携 */}
