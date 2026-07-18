@@ -145,7 +145,7 @@ export default async function handler(req, res) {
           sender: '自動返信',
           read: true,
           created_at: new Date().toISOString(),
-        }).catch(() => {})
+        }).then(({ error }) => error && console.error('auto-reply message insert', error))
       }
     }
   }

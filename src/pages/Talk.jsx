@@ -134,6 +134,9 @@ export default function Talk() {
               <div className="talk-messages">
                 {active.list.map((m) => (
                   <div key={m.id} className={'talk-bubble-row ' + m.direction}>
+                    {m.direction === 'out' && m.sender === '自動返信' && (
+                      <div className="talk-bubble-sender">🤖 自動返信</div>
+                    )}
                     <div className={'talk-bubble ' + m.direction}>{m.text}</div>
                     <div className="talk-bubble-time">{fmtTime(m.createdAt)}</div>
                   </div>
