@@ -13,6 +13,12 @@
 //   店名とLINE連携状態のみ。複数店舗を横断監視する別ツールから使う想定）
 //   Vercel Hobbyプランのサーバーレス関数数12個の上限のため、この既存ファイルに同居させている
 //   （send-line.js・cron-birthday.jsと同じ対策パターン）。
+// GET /api/notifications?stats=1 → Socialsmiler側の「全店舗管理ダッシュボード」用の
+//   利用状況サマリーAPI（顧客数・アクティブ顧客数・直近施術日・LINE連携数・スタッフ数のみ。
+//   顧客の氏名・電話番号などの個人情報は一切含まない）。
+//   Authorizationヘッダー（Bearer トークン）が環境変数ADMIN_STATS_TOKENと一致しないと
+//   401を返す（health=1と違いこちらは認証必須。店舗ごとに異なるトークンをVercelの環境変数に
+//   登録し、同じ値を池本さん側の店舗マスター「運用APIキー」列にも入れておくことで対応する）
 
 import { createClient } from '@supabase/supabase-js'
 import { admin } from './_lib/admin.js'
@@ -253,6 +259,50 @@ async function handleStaffAction(req, res) {
   return res.status(400).json({ error: 'unknown action' })
 }
 
+// 全店舗管理ダッシュボード（Socialsmiler側GAS）向けの利用状況サマリー。
+// 顧客個人情報（氏名・電話番号・LINEユーザーID本体など）は含めず、件数・日付のみ返す。
+const ADMIN_STATS_ACTIVE_WINDOW_DAYS = 180 // この日数以内に来店実績があれば「アクティブ」とみなす
+
+async function handleAdminStats(req, res) {
+  const expected = process.env.ADMIN_STATS_TOKEN
+  const given = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
+  if (!expected || given !== expected) {
+    return res.status(401).json({ error: 'unauthorized' })
+  }
+
+  const sinceIso = new Date(Date.now() - ADMIN_STATS_ACTIVE_WINDOW_DAYS * 24 * 60 * 60 * 1000)
+    .toISOString().slice(0, 10)
+
+  const [
+    { data: customers, error: custErr },
+    { data: setRow },
+    authList,
+  ] = await Promise.all([
+    supabase.from('customers').select('last_visit, integrations'),
+    supabase.from('settings').select('data').eq('id', 1).maybeSingle(),
+    admin.auth.admin.listUsers().catch(() => null),
+  ])
+  if (custErr) return res.status(500).json({ error: custErr.message })
+
+  const settings = (setRow && setRow.data) || {}
+  const list = customers || []
+  const customerCount = list.length
+  const activeCustomerCount = list.filter((c) => c.last_visit && c.last_visit >= sinceIso).length
+  const lastTreatmentDate = list.reduce((max, c) => (c.last_visit && c.last_visit > max ? c.last_visit : max), '') || null
+  const lineLinkedCount = list.filter((c) => c.integrations?.lineUserId).length
+  const staffCount = authList?.data?.users ? authList.data.users.length : null
+
+  return res.status(200).json({
+    ok: true,
+    salonName: settings.salonName || DEFAULT_SALON_NAME,
+    customerCount,
+    activeCustomerCount,
+    lastTreatmentDate,
+    lineLinkedCount,
+    staffCount,
+  })
+}
+
 export default async function handler(req, res) {
   if (req.method === 'GET') {
     // 軽量ステータスAPI（無認証）。複数店舗を横断監視する別ツールから使う想定で、
@@ -267,6 +317,9 @@ export default async function handler(req, res) {
         lineHealth: settings.lineHealth || null,
       })
     }
+
+    // 全店舗管理ダッシュボード用の利用状況サマリー（要トークン認証、上記コメント参照）
+    if (req.query?.stats === '1') return handleAdminStats(req, res)
 
     const { data, error } = await supabase
       .from('notifications')
